@@ -59,7 +59,7 @@ module.exports = function(grunt) {
 
         watch: {
             files: ['<%= meta.ourJsFiles %>'],
-            tasks: ['build']
+            tasks: ['build:dev']
         },
 
         clean: {

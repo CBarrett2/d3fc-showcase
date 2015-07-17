@@ -21,12 +21,18 @@
         .yTicks(5)
         .xTicks(0);
 
+    // Our zoom plugin implements pan and zoom
+    var zoomPlugin = fcsc.zoomPlugin();
+
     var chart = fcsc.chartFramework()
         .width(width)
         .height(height)
-        .series([line, area, gridlines]);
+        .series([line, area, gridlines])
+        .plugins([zoomPlugin]);
 
-    // Pass visible data
+    // Set the initial scale
+    chart.initDomain([data[250].date, data[500].date]);
+
     svg.datum(data)
         .call(chart);
 
