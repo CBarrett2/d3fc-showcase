@@ -8,7 +8,7 @@
         .attr('width', width)
         .attr('height', height);
 
-    var data = fc.dataGenerator()(1000);
+    var data = fc.dataGenerator()(5000);
 
     var area = fc.series.area()
         .yValue(function(d) { return d.open; })
@@ -23,6 +23,7 @@
 
     // Our zoom plugin implements pan and zoom
     var zoomPlugin = fcsc.zoomPlugin();
+    //    .scaleExtent(fc.util.extent(data, ['date']));
 
     var chart = fcsc.chartFramework()
         .width(width)

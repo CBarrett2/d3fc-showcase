@@ -8,16 +8,15 @@
         var plugins = [];
         var dateScale = fc.scale.dateTime()
             .range([0, width]);
-        var scaleExtent = [];
 
         function chart(selection) {
             selection.each(function(d, i) {
-                scaleExtent = fc.util.extent(d, ['date']);
-
                 // Y-axis automatically scales
+                var yExtent = fc.util.extent(chart.getVisibleData(d, dateScale.domain()), ['open', 'close']);
+                // Add say 20% on either side of extent
                 timeSeries.xDomain(dateScale.domain())
-                    .yDomain(fc.util.extent(d, ['open', 'close']));
-
+                    //.yDomain(fc.util.extent(d, ['open', 'close'])); non y-scaling
+                    .yDomain(yExtent);
                 timeSeries.plotArea(multi);
                 selection.call(timeSeries);
 
@@ -27,12 +26,6 @@
             });
             return chart;
         }
-
-        chart.scaleExtent = function(value) {
-            if (!arguments.length) { return scaleExtent; }
-            scaleExtent = value;
-            return chart;
-        };
 
         chart.dateScale = function(value) {
             if (!arguments.length) { return dateScale; }
