@@ -1,6 +1,5 @@
 (function(d3, fc) {
     'use strict';
-
     var width = 500;
     var height = 300;
 
@@ -9,15 +8,11 @@
         .attr('width', width)
         .attr('height', height);
 
-    var data = fc.dataGenerator()(150);
-
-    var chart = fc.chart.linearTimeSeries()
-        .xDomain(fc.util.extent(data, 'date'))
-        .yDomain(fc.util.extent(data, ['open', 'close']));
+    var data = fc.dataGenerator()(1000);
 
     var area = fc.series.area()
         .yValue(function(d) { return d.open; })
-        .y0Value(chart.yDomain()[0]);
+        .y0Value(0);
 
     var line = fc.series.line()
         .yValue(function(d) { return d.open; });
@@ -26,13 +21,13 @@
         .yTicks(5)
         .xTicks(0);
 
-    var multi = fc.series.multi()
-        .series([gridlines, area, line]);
+    var chart = fcsc.chartFramework()
+        .width(width)
+        .height(height)
+        .series([line, area, gridlines]);
 
-    chart.plotArea(multi);
-
+    // Pass visible data
     svg.datum(data)
         .call(chart);
 
 })(d3, fc);
-
