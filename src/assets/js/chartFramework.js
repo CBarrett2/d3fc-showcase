@@ -1,21 +1,15 @@
 (function(fcsc, fc, d3) {
     'use strict';
     fcsc.chartFramework = function() {
-        var width = 500;
-        var height = 300;
         var timeSeries = fc.chart.linearTimeSeries();
         var multi = fc.series.multi();
         var plugins = [];
-        /*var dateScale = timeSeries.xScale()
-            .range([0, width]);*/
 
         function chart(selection) {
             selection.each(function(d, i) {
                 // Y-axis automatically scales
                 var yExtent = fc.util.extent(chart.getVisibleData(d, timeSeries.xScale().domain()), ['low', 'high']);
-                // Add say 20% on either side of extent
-                //timeSeries.xDomain(dateScale.domain())
-                    //.yDomain(fc.util.extent(d, ['open', 'close'])); non y-scaling
+
                 timeSeries.yDomain(yExtent);
                 timeSeries.plotArea(multi);
                 selection.call(timeSeries);
