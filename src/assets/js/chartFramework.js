@@ -6,13 +6,13 @@
         var timeSeries = fc.chart.linearTimeSeries();
         var multi = fc.series.multi();
         var plugins = [];
-        var dateScale = fc.scale.dateTime()
+        var dateScale = timeSeries.xScale()
             .range([0, width]);
 
         function chart(selection) {
             selection.each(function(d, i) {
                 // Y-axis automatically scales
-                var yExtent = fc.util.extent(chart.getVisibleData(d, dateScale.domain()), ['open', 'close']);
+                var yExtent = fc.util.extent(chart.getVisibleData(d, dateScale.domain()), ['low', 'high']);
                 // Add say 20% on either side of extent
                 timeSeries.xDomain(dateScale.domain())
                     //.yDomain(fc.util.extent(d, ['open', 'close'])); non y-scaling
@@ -33,13 +33,6 @@
             return chart;
         };
 
-        // Perhaps this should be done using d3.rebind
-        chart.initDomain = function(value) {
-            if (!arguments.length) { return dateScale.domain(); }
-            dateScale.domain(value);
-            return chart;
-        };
-
         chart.width = function(value) {
             if (!arguments.length) { return width; }
             width = value;
@@ -50,6 +43,7 @@
         chart.height = function(value) {
             if (!arguments.length) { return height; }
             height = value;
+            timeSeries.yScale().range([0, height]);
             return chart;
         };
 
@@ -61,7 +55,7 @@
 
         d3.rebind(chart, multi, 'series');
 
-        chart.getVisibleData = function(data, dateExtent) { // currently unused
+        chart.getVisibleData = function(data, dateExtent) {
             // Calculate visible data, given [startDate, endDate]
             var bisector = d3.bisector(function(d) { return d.date; });
             var visibleData = data.slice(
@@ -71,6 +65,7 @@
             );
             return visibleData;
         };
+
         return chart;
     };
 })(fcsc, fc, d3);
