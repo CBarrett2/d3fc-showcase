@@ -31,7 +31,7 @@
         .plugins([zoomPlugin]);
 
     // Set the initial scale
-    chart.initDomain([data[250].date, data[500].date]);
+    chart.dateScale().domain([data[250].date, data[500].date]);
 
     svg.datum(data)
         .call(chart);
