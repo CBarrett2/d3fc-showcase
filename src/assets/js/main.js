@@ -23,7 +23,6 @@
 
     // Our zoom plugin implements pan and zoom
     var zoomPlugin = fcsc.zoomPlugin();
-    //    .scaleExtent(fc.util.extent(data, ['date']));
 
     var chart = fcsc.chartFramework()
         .width(width)
