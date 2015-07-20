@@ -1,5 +1,6 @@
 (function(d3, fc) {
     'use strict';
+    // set height/width of container
     var width = 500;
     var height = 300;
 
@@ -26,13 +27,11 @@
     //    .scaleExtent(fc.util.extent(data, ['date']));
 
     var chart = fcsc.chartFramework()
-        .width(width)
-        .height(height)
         .series([line, area, gridlines])
         .plugins([zoomPlugin]);
 
     // Set the initial scale
-    chart.dateScale().domain([data[250].date, data[500].date]);
+    chart.xScale().domain([data[250].date, data[500].date]);
 
     svg.datum(data)
         .call(chart);

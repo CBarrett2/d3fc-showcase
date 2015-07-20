@@ -6,17 +6,17 @@
         var timeSeries = fc.chart.linearTimeSeries();
         var multi = fc.series.multi();
         var plugins = [];
-        var dateScale = timeSeries.xScale()
-            .range([0, width]);
+        /*var dateScale = timeSeries.xScale()
+            .range([0, width]);*/
 
         function chart(selection) {
             selection.each(function(d, i) {
                 // Y-axis automatically scales
-                var yExtent = fc.util.extent(chart.getVisibleData(d, dateScale.domain()), ['low', 'high']);
+                var yExtent = fc.util.extent(chart.getVisibleData(d, timeSeries.xScale().domain()), ['low', 'high']);
                 // Add say 20% on either side of extent
-                timeSeries.xDomain(dateScale.domain())
+                //timeSeries.xDomain(dateScale.domain())
                     //.yDomain(fc.util.extent(d, ['open', 'close'])); non y-scaling
-                    .yDomain(yExtent);
+                timeSeries.yDomain(yExtent);
                 timeSeries.plotArea(multi);
                 selection.call(timeSeries);
 
@@ -27,26 +27,6 @@
             return chart;
         }
 
-        chart.dateScale = function(value) {
-            if (!arguments.length) { return dateScale; }
-            dateScale = value;
-            return chart;
-        };
-
-        chart.width = function(value) {
-            if (!arguments.length) { return width; }
-            width = value;
-            dateScale.range([0, width]);
-            return chart;
-        };
-
-        chart.height = function(value) {
-            if (!arguments.length) { return height; }
-            height = value;
-            timeSeries.yScale().range([0, height]);
-            return chart;
-        };
-
         chart.plugins = function(value) {
             if (!arguments.length) { return plugins; }
             plugins = value;
@@ -54,6 +34,7 @@
         };
 
         d3.rebind(chart, multi, 'series');
+        d3.rebind(chart, timeSeries, 'xScale');
 
         chart.getVisibleData = function(data, dateExtent) {
             // Calculate visible data, given [startDate, endDate]
