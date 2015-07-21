@@ -5,18 +5,19 @@
 
     var container = d3.select('#chart-example');
     
+    // Set SVGs
     var svgMain = container.select('svg.main')
         .attr('viewBox', function() { return "0 0 " + width + " " + height; })
         .attr('width', width)
         .attr('height', height);
         
-    /*var svgNav = container.select('svg.nav')
+    var svgNav = container.select('svg.nav')
         .attr('viewBox', function() { return "0 0 " + width +  " " + (height/3); })
         .attr('width', width)
-        .attr('height', height/3);*/
+        .attr('height', height/3);
 
     var data = fc.data.random.financial()(1000);
-    var visibleRange = [data[250].date, data[500].date] // arbitrary start
+    
     
     // Create Main chart
     var candlestick = fc.series.candlestick();
@@ -26,35 +27,21 @@
 
     var multi = fc.series.multi().series([candlestick, gridlines]);        
     var timeSeries = fc.chart.linearTimeSeries();
-        
+       
+    // Set initial domain
+    var visibleRange = [data[250].date, data[500].date]
     timeSeries.xDomain(visibleRange);
-    var yExtent = fc.util.extent(getVisibleData(data, timeSeries.xDomain()), ['low', 'high']);
-    timeSeries.yDomain(yExtent); //xNice, yNice...
-    var lastX = 0;
+
     var mainChart = function(selection) {
         data = selection.datum();
         
         // Scale y axis
-        console.log(timeSeries.xDomain())
         var yExtent = fc.util.extent(getVisibleData(data, timeSeries.xDomain()), ['low', 'high']);
         timeSeries.yDomain(yExtent);
         
-        
-        
         var zoom = d3.behavior.zoom()
             .x(timeSeries.xScale())
-            .on('zoomstart', function() {
-                //lastX = d3.mouse(this)[0];
-            })
             .on('zoom', function() {
-                // Alter the default behavior if panning
-                /*if (zoom.scale() === 1) {
-                    var tx = d3.mouse(this)[0] - lastX;
-                    var ty = zoom.translate()[1];
-
-                    zoom.translate([tx, ty]);
-                }
-                lastX = d3.mouse(this)[0];*/
                 render();
             });
         
@@ -64,43 +51,64 @@
         selection.call(zoom);
     }
     
-    function render() {
-        svgMain.datum(data)
-            .call(mainChart);
-    }
-        
-    render();
-    render();
+    
         
     // Create Nav chart    
-    /*var area = fc.series.area()
+    var area = fc.series.area()
         .yValue(function(d) { return d.open; });
 
     var line = fc.series.line()
         .yValue(function(d) { return d.open; });
     
-    var navPlugin = fcsc.navbarPlugin(chartMain);
-    var zoomPlugin2 = fcsc.zoomPlugin();
+    var multi2 = fc.series.multi().series([area, line]);        
+    var timeSeries2 = fc.chart.linearTimeSeries();
     
-    var chartNav = fcsc.chartFramework()
-        .series([line, area])
-        .plugins([navPlugin]);
-
-    // Set the initial scale. Perhaps this should be done by default if not set before chartFramwork is run for the first time (ie in chart() function)
-    chartNav.xScale().domain([data[0].date, data[data.length-1].date]);
+    // Set the initial scale
+    timeSeries2.xDomain([data[0].date, data[data.length-1].date]);
+    var yExtent = fc.util.extent(getVisibleData(data, timeSeries2.xDomain()), ['low', 'high']);
+    timeSeries2.yDomain(yExtent);
     
-    var main = svgMain.datum(data);
-    var nav = svgNav.datum(data);
+    var navChart = function(selection){
+        data = selection.datum();
         
-    var update = function() {
-        main.call(chartMain);
-        nav.call(chartNav);
+        //var brush = d3.svg.brush();
+        //brush.extent(timeSeries.xScale()) // ?
+        
+        /*brush.x(timeSeries2.xScale()) // maybe controlled chart?! OR, by scaling this domain (eg with pan/zoom) it will auto update the brush to correctly update the second chart
+            .on('brush', function() {
+                if (brush.extent()[0] - brush.extent()[1] !== 0) { // what does this do?!
+                    // Control the main chart's time series domain
+                    timeSeries.xDomain(brush.extent()); 
+                    render();
+                }
+            });
+            
+        selection.selectAll('rect.extent')
+            .attr('height', timeSeries2.yScale().range()[0])/
+        */
+        /*var zoom = d3.behavior.zoom()
+            .x(timeSeries2.xScale())
+            .on('zoom', function() {
+                render();
+            });*/
+            
+        timeSeries2.plotArea(multi2);
+        selection.call(timeSeries2);
+        //selection.call(brush);
+        //selection.call(zoom);
     }
     
-    chartMain.setUpdate(update)
-    chartNav.setUpdate(update)
-    update();*/
-
+    function render() {
+        svgMain.datum(data)
+            .call(mainChart);
+        
+        svgNav.datum(data)
+            .call(navChart);
+    }
+        
+    render();
+    render();
+    
     // Helper function
     function getVisibleData(data, dateExtent) {
         // Calculate visible data, given [startDate, endDate]
