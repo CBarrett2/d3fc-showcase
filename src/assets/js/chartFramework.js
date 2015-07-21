@@ -7,7 +7,6 @@
         var update = {};
 
         function chart(selection) {
-            parent = selection;
             selection.each(function(d, i) {
                 // Y-axis automatically scales
                 var yExtent = fc.util.extent(chart.getVisibleData(d, timeSeries.xScale().domain()), ['low', 'high']);
