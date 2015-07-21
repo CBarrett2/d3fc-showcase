@@ -1,4 +1,4 @@
-(function(fcsc, fc, d3) {
+(function(d3, fc, fcsc) {
     'use strict';
     fcsc.chartFramework = function() {
         var timeSeries = fc.chart.linearTimeSeries();
@@ -43,4 +43,4 @@
 
         return chart;
     };
-})(fcsc, fc, d3);
+})(d3, fc, fcsc);

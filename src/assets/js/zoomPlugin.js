@@ -1,4 +1,4 @@
-(function(fcsc, fc, d3) {
+(function(d3, fc, fcsc) {
     'use strict';
     fcsc.zoomPlugin = function() {
         var zoomBehavior = d3.behavior.zoom();
@@ -9,10 +9,11 @@
                     lastX = d3.mouse(this)[0];
                 })
                 .on('zoom', function() {
-
+                    // Alter the default behavior if panning
                     if (zoomBehavior.scale() === 1) {
                         var tx = d3.mouse(this)[0] - lastX;
                         var ty = zoomBehavior.translate()[1];
+
                         zoomBehavior.translate([tx, ty]);
                     }
                     lastX = d3.mouse(this)[0];
@@ -25,4 +26,4 @@
         }
         return zoom;
     };
-})(fcsc, fc, d3);
+})(d3, fc, fcsc);

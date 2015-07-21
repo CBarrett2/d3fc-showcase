@@ -1,6 +1,5 @@
-(function(d3, fc) {
+(function(d3, fc, fcsc) {
     'use strict';
-    // set height/width of container
     var width = 500;
     var height = 300;
 
@@ -9,11 +8,10 @@
         .attr('width', width)
         .attr('height', height);
 
-    var data = fc.dataGenerator()(5000);
+    var data = fc.data.random.financial()(5000);
 
     var area = fc.series.area()
-        .yValue(function(d) { return d.open; })
-        .y0Value(0);
+        .yValue(function(d) { return d.open; });
 
     var line = fc.series.line()
         .yValue(function(d) { return d.open; });
@@ -24,7 +22,6 @@
 
     // Our zoom plugin implements pan and zoom
     var zoomPlugin = fcsc.zoomPlugin();
-    //    .scaleExtent(fc.util.extent(data, ['date']));
 
     var chart = fcsc.chartFramework()
         .series([line, area, gridlines])
@@ -36,4 +33,4 @@
     svg.datum(data)
         .call(chart);
 
-})(d3, fc);
+})(d3, fc, fcsc);
