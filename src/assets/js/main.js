@@ -10,35 +10,70 @@
         .attr('width', width)
         .attr('height', height);
         
-    var svgNav = container.select('svg.nav')
+    /*var svgNav = container.select('svg.nav')
         .attr('viewBox', function() { return "0 0 " + width +  " " + (height/3); })
         .attr('width', width)
-        .attr('height', height/3);
+        .attr('height', height/3);*/
 
     var data = fc.data.random.financial()(1000);
-
+    var visibleRange = [data[250].date, data[500].date] // arbitrary start
+    
     // Create Main chart
     var candlestick = fc.series.candlestick();
-
     var gridlines = fc.annotation.gridline()
         .yTicks(5)
         .xTicks(0);
 
-    // Our zoom plugin implements pan and zoom
-    var zoomPlugin = fcsc.zoomPlugin();
+    var multi = fc.series.multi().series([candlestick, gridlines]);        
+    var timeSeries = fc.chart.linearTimeSeries();
+        
+    timeSeries.xDomain(visibleRange);
+    var yExtent = fc.util.extent(getVisibleData(data, timeSeries.xDomain()), ['low', 'high']);
+    timeSeries.yDomain(yExtent); //xNice, yNice...
+    var lastX = 0;
+    var mainChart = function(selection) {
+        data = selection.datum();
+        
+        // Scale y axis
+        console.log(timeSeries.xDomain())
+        var yExtent = fc.util.extent(getVisibleData(data, timeSeries.xDomain()), ['low', 'high']);
+        timeSeries.yDomain(yExtent);
+        
+        
+        
+        var zoom = d3.behavior.zoom()
+            .x(timeSeries.xScale())
+            .on('zoomstart', function() {
+                //lastX = d3.mouse(this)[0];
+            })
+            .on('zoom', function() {
+                // Alter the default behavior if panning
+                /*if (zoom.scale() === 1) {
+                    var tx = d3.mouse(this)[0] - lastX;
+                    var ty = zoom.translate()[1];
 
+                    zoom.translate([tx, ty]);
+                }
+                lastX = d3.mouse(this)[0];*/
+                render();
+            });
+        
+        // Redraw
+        timeSeries.plotArea(multi);
+        selection.call(timeSeries);
+        selection.call(zoom);
+    }
     
-    var chartMain = fcsc.chartFramework()
-        .series([candlestick, gridlines])
-        .plugins([zoomPlugin]);
-
-    // Set the initial scale
-    chartMain.xScale().domain([data[250].date, data[500].date]);
-
-    
+    function render() {
+        svgMain.datum(data)
+            .call(mainChart);
+    }
+        
+    render();
+    render();
         
     // Create Nav chart    
-    var area = fc.series.area()
+    /*var area = fc.series.area()
         .yValue(function(d) { return d.open; });
 
     var line = fc.series.line()
@@ -64,6 +99,17 @@
     
     chartMain.setUpdate(update)
     chartNav.setUpdate(update)
-    update();
+    update();*/
 
+    // Helper function
+    function getVisibleData(data, dateExtent) {
+        // Calculate visible data, given [startDate, endDate]
+        var bisector = d3.bisector(function(d) { return d.date; });
+        var visibleData = data.slice(
+        // Pad and clamp the bisector values to ensure extents can be calculated
+            Math.max(0, bisector.left(data, dateExtent[0]) - 1),
+            Math.min(bisector.right(data, dateExtent[1]) + 1, data.length)
+        );
+        return visibleData;
+    }
 })(d3, fc, fcsc);
