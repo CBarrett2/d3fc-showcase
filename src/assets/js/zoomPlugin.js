@@ -18,11 +18,11 @@
                     }
                     lastX = d3.mouse(this)[0];
                     // Recalling chart draws the new view, this is a place-holder for drawing/two way binding
-                    chart(selection);
+                    //chart(selection);
+                    chart.update();
                 });
 
             selection.call(zoomBehavior);
-            return zoom;
         }
         return zoom;
     };

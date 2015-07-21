@@ -4,8 +4,10 @@
         var timeSeries = fc.chart.linearTimeSeries();
         var multi = fc.series.multi();
         var plugins = [];
+        var update = {};
 
         function chart(selection) {
+            parent = selection;
             selection.each(function(d, i) {
                 // Y-axis automatically scales
                 var yExtent = fc.util.extent(chart.getVisibleData(d, timeSeries.xScale().domain()), ['low', 'high']);
@@ -18,9 +20,16 @@
                     selection.call(plugins[j], chart);
                 }
             });
-            return chart;
         }
 
+        chart.setUpdate = function(updated){
+            update = updated;
+        };
+        
+        chart.update = function() {
+            update();
+        };
+        
         chart.plugins = function(value) {
             if (!arguments.length) { return plugins; }
             plugins = value;
@@ -29,6 +38,7 @@
 
         d3.rebind(chart, multi, 'series');
         d3.rebind(chart, timeSeries, 'xScale');
+        d3.rebind(chart, timeSeries, 'yScale');
 
         chart.getVisibleData = function(data, dateExtent) {
             // Calculate visible data, given [startDate, endDate]

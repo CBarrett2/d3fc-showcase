@@ -1,6 +1,5 @@
 (function() {
     'use strict';
-
     // Crazyness to get a strict mode compliant reference to the global object
     var global = null;
     /* jshint ignore:start */
