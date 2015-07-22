@@ -18,7 +18,6 @@
 
     var data = fc.data.random.financial()(1000);
     
-    
     // Create Main chart
     var candlestick = fc.series.candlestick();
     var gridlines = fc.annotation.gridline()
@@ -39,62 +38,90 @@
         var yExtent = fc.util.extent(getVisibleData(data, timeSeries.xDomain()), ['low', 'high']);
         timeSeries.yDomain(yExtent);
         
+        // Redraw
+        timeSeries.plotArea(multi);
+        selection.call(timeSeries);
+        
+        // Important for initialization that this happens after timeSeries is called [or can call render() twice]
         var zoom = d3.behavior.zoom()
             .x(timeSeries.xScale())
             .on('zoom', function() {
                 render();
             });
-        
-        // Redraw
-        timeSeries.plotArea(multi);
-        selection.call(timeSeries);
         selection.call(zoom);
     }
     
-    
-        
     // Create Nav chart    
     var area = fc.series.area()
-        .yValue(function(d) { return d.open; });
+        .yValue(function(d) { return d.open; })
+        //.y0Value() set properly
 
     var line = fc.series.line()
         .yValue(function(d) { return d.open; });
     
-    var multi2 = fc.series.multi().series([area, line]);        
-    var timeSeries2 = fc.chart.linearTimeSeries();
+    var navMulti = fc.series.multi().series([area, line]);        
+    var navTimeSeries = fc.chart.linearTimeSeries();
     
     // Set the initial scale
-    timeSeries2.xDomain([data[0].date, data[data.length-1].date]);
-    var yExtent = fc.util.extent(getVisibleData(data, timeSeries2.xDomain()), ['low', 'high']);
-    timeSeries2.yDomain(yExtent);
+    navTimeSeries.xDomain([data[0].date, data[data.length-1].date]);
+    var yExtent = fc.util.extent(getVisibleData(data, navTimeSeries.xDomain()), ['low', 'high']);
+    navTimeSeries.yDomain(yExtent);
     
     var navChart = function(selection){
         data = selection.datum();
         
-        //var brush = d3.svg.brush();
-        //brush.extent(timeSeries.xScale()) // ?
+        /*var zoom = d3.behavior.zoom()
+            .x(navTimeSeries.xScale())
+            .on('zoom', function() {
+                render();
+            });*/
+            
+        navTimeSeries.plotArea(navMulti);
+        selection.call(navTimeSeries);
         
-        /*brush.x(timeSeries2.xScale()) // maybe controlled chart?! OR, by scaling this domain (eg with pan/zoom) it will auto update the brush to correctly update the second chart
+        var brush = d3.svg.brush(); // Brush doesnt draw initially unless render called twice
+        brush.x(navTimeSeries.xScale())
+            .on('brushstart', function() {
+                
+                //if (brush.extent()[0] - brush.extent()[1] !== 0) { 
+                    // Control the main chart's time series domain
+                    
+                // check if on brush or outside
+                    
+                var x = d3.mouse(this)[0];
+                var left = navTimeSeries.xScale()(brush.extent()[0]);
+                var right = navTimeSeries.xScale()(brush.extent()[1]);
+                
+                if ((x < left) || (x > right)) {
+                    // If outside the brush, redraw it at new date
+                    console.log("outside")
+                    var newDate = navTimeSeries.xScale().invert(x);
+                    var secondDate = navTimeSeries.xScale().invert(x+5);
+                    brush.extent([newDate, newDate]);
+                    console.log(brush.extent())
+                    //d3.event.stopPropogation();
+                    //timeSeries.xDomain(brush.extent()); should be done on 'brush'
+                    //render();
+                }
+                //
+                
+                //}
+            })
             .on('brush', function() {
-                if (brush.extent()[0] - brush.extent()[1] !== 0) { // what does this do?!
+                if (brush.extent()[0] - brush.extent()[1] !== 0) { 
                     // Control the main chart's time series domain
                     timeSeries.xDomain(brush.extent()); 
                     render();
                 }
             });
             
-        selection.selectAll('rect.extent')
-            .attr('height', timeSeries2.yScale().range()[0])/
-        */
-        /*var zoom = d3.behavior.zoom()
-            .x(timeSeries2.xScale())
-            .on('zoom', function() {
-                render();
-            });*/
+        //selection.selectAll('rect.extent')
+        //    .attr('height', navTimeSeries.yScale().range()[0]);
             
-        timeSeries2.plotArea(multi2);
-        selection.call(timeSeries2);
-        //selection.call(brush);
+        brush.extent(timeSeries.xDomain());
+        
+        selection.call(brush).selectAll('rect')
+            .attr('height', navTimeSeries.yScale().range()[0]);;
         //selection.call(zoom);
     }
     
