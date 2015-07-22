@@ -116,6 +116,7 @@
 
     var brush = d3.svg.brush();
     var navMulti = fc.series.multi().series([area, line, brush]);
+    
     var navChart = function(selection) {
         data = selection.datum();
 
