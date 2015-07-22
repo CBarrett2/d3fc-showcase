@@ -38,7 +38,8 @@
 
     // Create main chart and set how much data is initially viewed
     var timeSeries = fc.chart.linearTimeSeries()
-        .xDomain([data[Math.floor(data.length / 2)].date, data[Math.floor(data.length * 3 / 4)].date]);
+        .xDomain([data[Math.floor(data.length / 2)].date, data[Math.floor(data.length * 3 / 4)].date])
+        .xTicks(6);
 
     var candlestick = fc.series.candlestick();
     var gridlines = fc.annotation.gridline()
@@ -60,6 +61,10 @@
 
         // Scale y axis
         var yExtent = fc.util.extent(getVisibleData(data, timeSeries.xDomain()), ['low', 'high']);
+        // Add 10% either side of extreme high/lows
+        var variance = yExtent[1] - yExtent[0];
+        yExtent[0] -= variance * 0.1;
+        yExtent[1] += variance * 0.1;
         timeSeries.yDomain(yExtent);
 
         // Redraw
@@ -116,7 +121,7 @@
 
     var brush = d3.svg.brush();
     var navMulti = fc.series.multi().series([area, line, brush]);
-    
+
     var navChart = function(selection) {
         data = selection.datum();
 
@@ -127,6 +132,18 @@
                     render();
                 }
             });
+
+        // Allow to zoom using mouse, but disable panning
+        var zoom = d3.behavior.zoom()
+            .x(timeSeries.xScale())
+            .on('zoom', function() {
+                if (zoom.scale() === 1) {
+                    zoom.translate([0, 0]);
+                } else {
+                    render();
+                }
+            });
+        selection.call(zoom);
 
         navMulti.mapping(function(series) {
                 if (series === brush) {
