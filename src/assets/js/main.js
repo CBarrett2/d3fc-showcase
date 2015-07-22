@@ -1,20 +1,32 @@
 (function(d3, fc, fcsc) {
     'use strict';
+    function getVisibleData(data, dateExtent) {
+        // Calculate visible data, given [startDate, endDate]
+        var bisector = d3.bisector(function(d) { return d.date; });
+        var visibleData = data.slice(
+        // Pad and clamp the bisector values to ensure extents can be calculated
+            Math.max(0, bisector.left(data, dateExtent[0]) - 1),
+            Math.min(bisector.right(data, dateExtent[1]) + 1, data.length)
+        );
+        return visibleData;
+    }
+
     var width = 500;
     var height = 300;
+    var navHeight = height / 3;
 
     var container = d3.select('#chart-example');
 
     // Set SVGs
     var svgMain = container.select('svg.main')
-        .attr('viewBox', function() { return "0 0 " + width + " " + height; })
+        .attr('viewBox', function() { return '0 0 ' + width + ' ' + (height / 3); })
         .attr('width', width)
         .attr('height', height);
 
     var svgNav = container.select('svg.nav')
-        .attr('viewBox', function() { return "0 0 " + width +  " " + (height/3); })
+        .attr('viewBox', function() { return '0 0 ' + width + ' ' + (height / 3); })
         .attr('width', width)
-        .attr('height', height/3);
+        .attr('height', navHeight);
 
     var data = fc.data.random.financial()(1000);
 
@@ -28,7 +40,7 @@
     var timeSeries = fc.chart.linearTimeSeries();
 
     // Set initial domain
-    var visibleRange = [data[250].date, data[500].date]
+    var visibleRange = [data[250].date, data[500].date];
     timeSeries.xDomain(visibleRange);
 
     var mainChart = function(selection) {
@@ -49,12 +61,12 @@
                 render();
             });
         selection.call(zoom);
-    }
+    };
 
     // Create Nav chart
     var area = fc.series.area()
-        .yValue(function(d) { return d.open; })
-        //.y0Value() set properly
+        .yValue(function(d) { return d.open; });
+    //.y0Value(); set properly
 
     var line = fc.series.line()
         .yValue(function(d) { return d.open; });
@@ -66,7 +78,7 @@
     var yExtent = fc.util.extent(getVisibleData(data, navTimeSeries.xDomain()), ['low', 'high']);
     navTimeSeries.yDomain(yExtent);
 
-    var navChart = function(selection){
+    var navChart = function(selection) {
         data = selection.datum();
 
         var brush = d3.svg.brush();
@@ -78,21 +90,20 @@
                 }
             });
 
-        var navMulti = fc.series.multi().series([area, line, brush])
+        var navMulti = fc.series.multi().series([area, line, brush]);
         navMulti.mapping(function(series) {
-            if(series === brush){
+            if (series === brush) {
                 brush.extent([
                     [timeSeries.xDomain()[0], navTimeSeries.yDomain()[0]],
                     [timeSeries.xDomain()[1], navTimeSeries.yDomain()[1]]
                 ]);
-
             }
             return data;
         });
 
         navTimeSeries.plotArea(navMulti);
         selection.call(navTimeSeries);
-    }
+    };
 
     function render() {
         svgMain.datum(data)
@@ -104,14 +115,4 @@
 
     render();
 
-    function getVisibleData(data, dateExtent) {
-        // Calculate visible data, given [startDate, endDate]
-        var bisector = d3.bisector(function(d) { return d.date; });
-        var visibleData = data.slice(
-        // Pad and clamp the bisector values to ensure extents can be calculated
-            Math.max(0, bisector.left(data, dateExtent[0]) - 1),
-            Math.min(bisector.right(data, dateExtent[1]) + 1, data.length)
-        );
-        return visibleData;
-    }
 })(d3, fc, fcsc);
