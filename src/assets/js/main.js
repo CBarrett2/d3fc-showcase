@@ -34,14 +34,11 @@
         .attr('width', width)
         .attr('height', navHeight);
 
-    var data = fc.data.random.financial()(1000);
+    var data = fc.data.random.financial()(250);
 
-    // Create main chart
-    var timeSeries = fc.chart.linearTimeSeries();
-
-    // Set initial domain
-    var visibleRange = [data[250].date, data[500].date];
-    timeSeries.xDomain(visibleRange);
+    // Create main chart and set how much data is initially viewed
+    var timeSeries = fc.chart.linearTimeSeries()
+        .xDomain([data[Math.floor(data.length / 2)].date, data[Math.floor(data.length * 3 / 4)].date]);
 
     var candlestick = fc.series.candlestick();
     var gridlines = fc.annotation.gridline()
@@ -51,12 +48,14 @@
     // Create and apply the Moving Average
     var movingAverage = fc.indicator.algorithm.movingAverage();
 
-
     // Create a line that renders the result
     var ma = fc.series.line()
         .yValue(function(d) { return d.movingAverage; });
 
     var multi = fc.series.multi().series([candlestick, gridlines, ma]);
+
+
+
 
     var mainChart = function(selection) {
         data = selection.datum();
@@ -67,16 +66,16 @@
         timeSeries.yDomain(yExtent);
 
         // Redraw
-
         timeSeries.plotArea(multi);
         selection.call(timeSeries);
 
-        // Important for initialization that this happens after timeSeries is called [or can call render() twice]
+        // Behaves oddly if not reinitialized every render
         var zoom = d3.behavior.zoom()
             .x(timeSeries.xScale())
             .on('zoom', function() {
                 render();
             });
+
         selection.call(zoom);
     };
 
@@ -105,12 +104,11 @@
     };
 
     // Create navigation chart
-    var navTimeSeries = fc.chart.linearTimeSeries();
-
-    // Set the initial domain
-    navTimeSeries.xDomain(fc.util.extent(data, 'date'));
-    var yExtent = fc.util.extent(getVisibleData(data, navTimeSeries.xDomain()), ['low', 'high']);
-    navTimeSeries.yDomain(yExtent);
+    var yExtent = fc.util.extent(getVisibleData(data, fc.util.extent(data, 'date')), ['low', 'high']);
+    var navTimeSeries = fc.chart.linearTimeSeries()
+        .xDomain(fc.util.extent(data, 'date'))
+        .yDomain(yExtent)
+        .yTicks(5);
 
     var area = fc.series.area()
         .yValue(function(d) { return d.open; })
@@ -119,10 +117,11 @@
     var line = fc.series.line()
         .yValue(function(d) { return d.open; });
 
+    var brush = d3.svg.brush();
+    var navMulti = fc.series.multi().series([area, line, brush]);
     var navChart = function(selection) {
         data = selection.datum();
 
-        var brush = d3.svg.brush();
         brush.on('brush', function() {
                 if (brush.extent()[0][0] - brush.extent()[1][0] !== 0) {
                     // Control the main chart's time series domain
@@ -131,16 +130,15 @@
                 }
             });
 
-        var navMulti = fc.series.multi().series([area, line, brush]);
         navMulti.mapping(function(series) {
-            if (series === brush) {
-                brush.extent([
-                    [timeSeries.xDomain()[0], navTimeSeries.yDomain()[0]],
-                    [timeSeries.xDomain()[1], navTimeSeries.yDomain()[1]]
-                ]);
-            }
-            return data;
-        });
+                if (series === brush) {
+                    brush.extent([
+                        [timeSeries.xDomain()[0], navTimeSeries.yDomain()[0]],
+                        [timeSeries.xDomain()[1], navTimeSeries.yDomain()[1]]
+                    ]);
+                }
+                return data;
+            });
 
         navTimeSeries.plotArea(navMulti);
         selection.call(navTimeSeries);
@@ -156,7 +154,7 @@
         svgNav.datum(data)
             .call(navChart);
     }
-    render();
+    //render();
     render();
 
 })(d3, fc);
