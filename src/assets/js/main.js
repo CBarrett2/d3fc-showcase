@@ -13,7 +13,9 @@
 
     var width = 500;
     var height = 300;
+    var rsiHeight = height / 2;
     var navHeight = height / 3;
+
 
     // Set SVGs
     var container = d3.select('#chart-example');
@@ -21,6 +23,11 @@
         .attr('viewBox', function() { return '0 0 ' + width + ' ' + height; })
         .attr('width', width)
         .attr('height', height);
+
+    var svgRSI = container.select('svg.rsi')
+        .attr('viewBox', function() { return '0 0 ' + width + ' ' + rsiHeight; })
+        .attr('width', width)
+        .attr('height', rsiHeight);
 
     var svgNav = container.select('svg.nav')
         .attr('viewBox', function() { return '0 0 ' + width + ' ' + navHeight; })
@@ -41,16 +48,26 @@
         .yTicks(5)
         .xTicks(0);
 
-    var multi = fc.series.multi().series([candlestick, gridlines]);
+    // Create and apply the Moving Average
+    var movingAverage = fc.indicator.algorithm.movingAverage();
+
+
+    // Create a line that renders the result
+    var ma = fc.series.line()
+        .yValue(function(d) { return d.movingAverage; });
+
+    var multi = fc.series.multi().series([candlestick, gridlines, ma]);
 
     var mainChart = function(selection) {
         data = selection.datum();
+        movingAverage(data);
 
         // Scale y axis
         var yExtent = fc.util.extent(getVisibleData(data, timeSeries.xDomain()), ['low', 'high']);
         timeSeries.yDomain(yExtent);
 
         // Redraw
+
         timeSeries.plotArea(multi);
         selection.call(timeSeries);
 
@@ -61,6 +78,30 @@
                 render();
             });
         selection.call(zoom);
+    };
+
+    // Create RSI chart
+    var rsiScale = d3.scale.linear()
+        .domain([0, 100])
+        .range([rsiHeight, 0]);
+    var rsiAlgorithm = fc.indicator.algorithm.relativeStrengthIndex();
+
+    var rsi = fc.indicator.renderer.relativeStrengthIndex()
+        .xScale(timeSeries.xScale())
+        .yScale(rsiScale);
+
+    var rsiChart = function(selection) {
+        data = selection.datum();
+        rsiAlgorithm(data);
+
+        // Important for initialization that this happens after timeSeries is called [or can call render() twice]
+        var zoom = d3.behavior.zoom()
+            .x(timeSeries.xScale())
+            .on('zoom', function() {
+                render();
+            });
+        selection.call(zoom);
+        selection.call(rsi);
     };
 
     // Create navigation chart
@@ -108,6 +149,9 @@
     function render() {
         svgMain.datum(data)
             .call(mainChart);
+
+        svgRSI.datum(data)
+            .call(rsiChart);
 
         svgNav.datum(data)
             .call(navChart);
