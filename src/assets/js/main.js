@@ -54,9 +54,6 @@
 
     var multi = fc.series.multi().series([candlestick, gridlines, ma]);
 
-
-
-
     var mainChart = function(selection) {
         data = selection.datum();
         movingAverage(data);
@@ -154,7 +151,7 @@
         svgNav.datum(data)
             .call(navChart);
     }
-    //render();
+
     render();
 
 })(d3, fc);
