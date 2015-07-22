@@ -1,4 +1,4 @@
-(function(d3, fc, fcsc) {
+(function(d3, fc) {
     'use strict';
     function getVisibleData(data, dateExtent) {
         // Calculate visible data, given [startDate, endDate]
@@ -15,33 +15,33 @@
     var height = 300;
     var navHeight = height / 3;
 
-    var container = d3.select('#chart-example');
-
     // Set SVGs
+    var container = d3.select('#chart-example');
     var svgMain = container.select('svg.main')
-        .attr('viewBox', function() { return '0 0 ' + width + ' ' + (height / 3); })
+        .attr('viewBox', function() { return '0 0 ' + width + ' ' + height; })
         .attr('width', width)
         .attr('height', height);
 
     var svgNav = container.select('svg.nav')
-        .attr('viewBox', function() { return '0 0 ' + width + ' ' + (height / 3); })
+        .attr('viewBox', function() { return '0 0 ' + width + ' ' + navHeight; })
         .attr('width', width)
         .attr('height', navHeight);
 
     var data = fc.data.random.financial()(1000);
 
-    // Create Main chart
+    // Create main chart
+    var timeSeries = fc.chart.linearTimeSeries();
+
+    // Set initial domain
+    var visibleRange = [data[250].date, data[500].date];
+    timeSeries.xDomain(visibleRange);
+
     var candlestick = fc.series.candlestick();
     var gridlines = fc.annotation.gridline()
         .yTicks(5)
         .xTicks(0);
 
     var multi = fc.series.multi().series([candlestick, gridlines]);
-    var timeSeries = fc.chart.linearTimeSeries();
-
-    // Set initial domain
-    var visibleRange = [data[250].date, data[500].date];
-    timeSeries.xDomain(visibleRange);
 
     var mainChart = function(selection) {
         data = selection.datum();
@@ -63,20 +63,20 @@
         selection.call(zoom);
     };
 
-    // Create Nav chart
-    var area = fc.series.area()
-        .yValue(function(d) { return d.open; });
-    //.y0Value(); set properly
-
-    var line = fc.series.line()
-        .yValue(function(d) { return d.open; });
-
+    // Create navigation chart
     var navTimeSeries = fc.chart.linearTimeSeries();
 
-    // Set the initial scale
+    // Set the initial domain
     navTimeSeries.xDomain(fc.util.extent(data, 'date'));
     var yExtent = fc.util.extent(getVisibleData(data, navTimeSeries.xDomain()), ['low', 'high']);
     navTimeSeries.yDomain(yExtent);
+
+    var area = fc.series.area()
+        .yValue(function(d) { return d.open; })
+        .y0Value(yExtent[0]);
+
+    var line = fc.series.line()
+        .yValue(function(d) { return d.open; });
 
     var navChart = function(selection) {
         data = selection.datum();
@@ -112,7 +112,7 @@
         svgNav.datum(data)
             .call(navChart);
     }
-
+    render();
     render();
 
-})(d3, fc, fcsc);
+})(d3, fc);
