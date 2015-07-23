@@ -1,6 +1,9 @@
 (function() {
     'use strict';
 
+    // Needs to be defined like this so that the grunt task can update it
+    var version = '0.2.6';
+
     // Crazyness to get a strict mode compliant reference to the global object
     var global = null;
     /* jshint ignore:start */
@@ -10,6 +13,10 @@
     global.fc = {
         annotation: {},
         chart: {},
+        data: {
+            feed: {},
+            random: {}
+        },
         indicator: {
             algorithm: {
                 calculator: {}
@@ -19,12 +26,148 @@
         scale: {
             discontinuity: {}
         },
-        series: {},
+        series: {
+            stacked: {}
+        },
         svg: {},
         tool: {},
-        util: {}
+        util: {},
+        version: version
     };
 }());
+
+(function(d3, fc) {
+    'use strict';
+
+    fc.annotation.band = function() {
+
+        // ordinal axes have a rangeExtent function, this adds any padding that
+        // was applied to the range. This functions returns the rangeExtent
+        // if present, or range otherwise
+        function range(scale) {
+            return scale.rangeExtent ? scale.rangeExtent() : scale.range();
+        }
+
+        var xScale = d3.time.scale(),
+            yScale = d3.scale.linear(),
+            x0, x1, y0, y1,
+            x0Scaled = function() {
+                return range(xScale)[0];
+            },
+            x1Scaled = function() {
+                return range(xScale)[1];
+            },
+            y0Scaled = function() {
+                return range(yScale)[0];
+            },
+            y1Scaled = function() {
+                return range(yScale)[1];
+            },
+            decorate = fc.util.fn.noop;
+
+        var dataJoin = fc.util.dataJoin()
+            .selector('g.annotation')
+            .element('g')
+            .attrs({'class': 'annotation'});
+
+        var band = function(selection) {
+            selection.each(function(data, index) {
+
+                var container = d3.select(this);
+
+                var g = dataJoin(container, data);
+
+                g.enter()
+                    .append('path')
+                    .classed('band', true);
+
+                var pathGenerator = fc.svg.bar()
+                    .align('right')
+                    .x(x0Scaled)
+                    .y(y0Scaled)
+                    .height(function() {
+                        return y1Scaled.apply(this, arguments) - y0Scaled.apply(this, arguments);
+                    })
+                    .width(function() {
+                        return x1Scaled.apply(this, arguments) - x0Scaled.apply(this, arguments);
+                    });
+
+                g.select('path')
+                    .attr('d', function(d, i) {
+                        // the path generator is being used to render a single path, hence
+                        // an explicit index is provided
+                        return pathGenerator.call(this, [d], i);
+                    });
+
+                decorate(g, data, index);
+            });
+        };
+
+        band.xScale = function(x) {
+            if (!arguments.length) {
+                return xScale;
+            }
+            xScale = x;
+            return band;
+        };
+        band.yScale = function(x) {
+            if (!arguments.length) {
+                return yScale;
+            }
+            yScale = x;
+            return band;
+        };
+        band.decorate = function(x) {
+            if (!arguments.length) {
+                return decorate;
+            }
+            decorate = x;
+            return band;
+        };
+        band.x0 = function(x) {
+            if (!arguments.length) {
+                return x0;
+            }
+            x0 = d3.functor(x);
+            x0Scaled = function() {
+                return xScale(x0.apply(this, arguments));
+            };
+            return band;
+        };
+        band.x1 = function(x) {
+            if (!arguments.length) {
+                return x1;
+            }
+            x1 = d3.functor(x);
+            x1Scaled = function() {
+                return xScale(x1.apply(this, arguments));
+            };
+            return band;
+        };
+        band.y0 = function(x) {
+            if (!arguments.length) {
+                return y0;
+            }
+            y0 = d3.functor(x);
+            y0Scaled = function() {
+                return yScale(y0.apply(this, arguments));
+            };
+            return band;
+        };
+        band.y1 = function(x) {
+            if (!arguments.length) {
+                return y1;
+            }
+            y1 = d3.functor(x);
+            y1Scaled = function() {
+                return yScale(y1.apply(this, arguments));
+            };
+            return band;
+        };
+        return band;
+    };
+
+}(d3, fc));
 
 (function(d3, fc) {
     'use strict';
@@ -36,42 +179,46 @@
             xTicks = 10,
             yTicks = 10;
 
+        var xDecorate = fc.util.fn.noop,
+            yDecorate = fc.util.fn.noop;
+
+        var xLineDataJoin = fc.util.dataJoin()
+            .selector('line.x')
+            .element('line')
+            .attrs({'class': 'x gridline'});
+
+        var yLineDataJoin = fc.util.dataJoin()
+            .selector('line.y')
+            .element('line')
+            .attrs({'class': 'y gridline'});
+
         var gridlines = function(selection) {
 
-            selection.each(function() {
+            selection.each(function(data, index) {
 
-                var container = d3.select(this);
+                var xData = xScale.ticks(xTicks);
+                var xLines = xLineDataJoin(this, xData);
 
-                var xLines = fc.util.simpleDataJoin(container, 'x',
-                    xScale.ticks(xTicks));
-
-                xLines.enter()
-                    .append('line')
-                    .attr('class', 'gridline');
-
-                xLines.select('line')
-                    .attr({
+                xLines.attr({
                         'x1': xScale,
                         'x2': xScale,
                         'y1': yScale.range()[0],
                         'y2': yScale.range()[1]
                     });
 
-                var yLines = fc.util.simpleDataJoin(container, 'y',
-                    yScale.ticks(yTicks));
+                xDecorate(xLines, xData, index);
 
-                yLines.enter()
-                    .append('line')
-                    .attr('class', 'gridline');
+                var yData = yScale.ticks(yTicks);
+                var yLines = yLineDataJoin(this, yData);
 
-                yLines.select('line')
-                    .attr({
+                yLines.attr({
                         'x1': xScale.range()[0],
                         'x2': xScale.range()[1],
                         'y1': yScale,
                         'y2': yScale
                     });
 
+                yDecorate(yLines, yData, index);
 
             });
         };
@@ -104,6 +251,20 @@
             yTicks = x;
             return gridlines;
         };
+        gridlines.yDecorate = function(x) {
+            if (!arguments.length) {
+                return yDecorate;
+            }
+            yDecorate = x;
+            return gridlines;
+        };
+        gridlines.xDecorate = function(x) {
+            if (!arguments.length) {
+                return xDecorate;
+            }
+            xDecorate = x;
+            return gridlines;
+        };
 
 
         return gridlines;
@@ -129,7 +290,7 @@
             .attrs({'class': 'annotation'});
 
         var line = function(selection) {
-            selection.each(function(data) {
+            selection.each(function(data, index) {
 
                 // the value scale which the annotation 'value' relates to, the crossScale
                 // is the other. Which is which depends on the orienation!
@@ -211,7 +372,7 @@
                 g.select('text')
                     .text(label);
 
-                decorate(g);
+                decorate(g, data, index);
             });
         };
 
@@ -272,6 +433,90 @@
 (function(d3, fc) {
     'use strict';
 
+    fc.chart.legend = function() {
+        var tableDecorate = fc.util.fn.noop,
+            rowDecorate = fc.util.fn.noop;
+
+        var items = [
+                ['datum', function(d) { return d.datum; }]
+            ];
+
+        var tableDataJoin = fc.util.dataJoin()
+            .selector('table.legend')
+            .element('table')
+            .attrs({'class': 'legend'});
+
+        var rowDataJoin = fc.util.dataJoin()
+            .selector('tr.row')
+            .element('tr')
+            .attrs({'class': 'row'});
+
+        var legend = function(selection) {
+            selection.each(function(data, index) {
+                var container = d3.select(this);
+
+                var legendData = items.map(function(item, i) {
+                    return {
+                        datum: data,
+                        header: d3.functor(item[0]),
+                        value: d3.functor(item[1])
+                    };
+                });
+
+                var table = tableDataJoin(container, [legendData]);
+
+                var trUpdate = rowDataJoin(table);
+
+                var trEnter = trUpdate.enter();
+                trEnter.append('th');
+                trEnter.append('td');
+
+                trUpdate.select('th')
+                    .html(function(d, i) {
+                        return d.header.call(this, d.datum, i);
+                    });
+
+                trUpdate.select('td')
+                    .html(function(d, i) {
+                        return d.value.call(this, d.datum, i);
+                    });
+
+                tableDecorate(table, data, index);
+                rowDecorate(trUpdate, data, index);
+            });
+        };
+
+        legend.items = function(x) {
+            if (!arguments.length) {
+                return items;
+            }
+            items = x;
+            return legend;
+        };
+
+        legend.rowDecorate = function(x) {
+            if (!arguments.length) {
+                return rowDecorate;
+            }
+            rowDecorate = x;
+            return legend;
+        };
+
+        legend.tableDecorate = function(x) {
+            if (!arguments.length) {
+                return tableDecorate;
+            }
+            tableDecorate = x;
+            return legend;
+        };
+
+        return legend;
+    };
+
+})(d3, fc);
+(function(d3, fc) {
+    'use strict';
+
     fc.chart.linearTimeSeries = function() {
 
         var xAxisHeight = 20;
@@ -311,8 +556,7 @@
                 plotAreaContainer.enter()
                     .append('svg')
                     .attr({
-                        'class': 'plot-area',
-                        'overflow': 'hidden'
+                        'class': 'plot-area'
                     })
                     .layout(plotAreaLayout);
 
@@ -530,7 +774,84 @@
 (function(fc) {
     'use strict';
 
-    fc.dataGenerator = function() {
+    // https://docs.exchange.coinbase.com/#market-data
+
+    fc.data.feed.coinbase = function() {
+
+        var product = 'BTC-USD',
+            start = null,
+            end = null,
+            granularity = null;
+
+        var coinbase = function(cb) {
+            var params = [];
+            if (start != null) {
+                params.push('start=' + start.toISOString());
+            }
+            if (end != null) {
+                params.push('end=' + end.toISOString());
+            }
+            if (granularity != null) {
+                params.push('granularity=' + granularity);
+            }
+            var url = 'https://api.exchange.coinbase.com/products/' + product + '/candles?' + params.join('&');
+            d3.json(url, function(error, data) {
+                if (error) {
+                    cb(error);
+                    return;
+                }
+                data = data.map(function(d) {
+                    return {
+                        date: new Date(d[0] * 1000),
+                        open: d[3],
+                        high: d[2],
+                        low: d[1],
+                        close: d[4],
+                        volume: d[5]
+                    };
+                });
+                cb(error, data);
+            });
+        };
+
+        coinbase.product = function(x) {
+            if (!arguments.length) {
+                return product;
+            }
+            product = x;
+            return coinbase;
+        };
+        coinbase.start = function(x) {
+            if (!arguments.length) {
+                return start;
+            }
+            start = x;
+            return coinbase;
+        };
+        coinbase.end = function(x) {
+            if (!arguments.length) {
+                return end;
+            }
+            end = x;
+            return coinbase;
+        };
+        coinbase.granularity = function(x) {
+            if (!arguments.length) {
+                return granularity;
+            }
+            granularity = x;
+            return coinbase;
+        };
+
+        return coinbase;
+    };
+
+}(fc));
+
+(function(fc) {
+    'use strict';
+
+    fc.data.random.financial = function() {
 
         var mu = 0.1,
             sigma = 0.1,
@@ -574,14 +895,14 @@
             var millisecondsPerYear = 3.15569e10,
                 years = (toDate.getTime() - startDate.getTime()) / millisecondsPerYear;
 
-            var prices = randomWalk(
+            var prices = fc.data.random.walk(
                 years,
                 days * stepsPerDay,
                 mu,
                 sigma,
                 startPrice
             );
-            var volumes = randomWalk(
+            var volumes = fc.data.random.walk(
                 years,
                 days,
                 0,
@@ -603,29 +924,6 @@
             return calculateOHLC(days, prices, volumes).filter(function(d) {
                 return !filter || filter(d.date);
             });
-        };
-
-        var randomWalk = function(period, steps, mu, sigma, initial) {
-            var randomNormal = d3.random.normal(),
-                timeStep = period / steps,
-                increments = new Array(steps + 1),
-                increment,
-                step;
-
-            // Compute step increments for the discretized GBM model.
-            for (step = 1; step < increments.length; step += 1) {
-                increment = randomNormal();
-                increment *= Math.sqrt(timeStep);
-                increment *= sigma;
-                increment += (mu - ((sigma * sigma) / 2)) * timeStep;
-                increments[step] = Math.exp(increment);
-            }
-            // Return the cumulative product of increments from initial value.
-            increments[0] = initial;
-            for (step = 1; step < increments.length; step += 1) {
-                increments[step] = increments[step - 1] * increments[step];
-            }
-            return increments;
         };
 
         gen.mu = function(x) {
@@ -690,6 +988,33 @@
 
 }(fc));
 
+(function(d3, fc) {
+    'use strict';
+
+    fc.data.random.walk = function(period, steps, mu, sigma, initial) {
+        var randomNormal = d3.random.normal(),
+            timeStep = period / steps,
+            increments = new Array(steps + 1),
+            increment,
+            step;
+
+        // Compute step increments for the discretized GBM model.
+        for (step = 1; step < increments.length; step += 1) {
+            increment = randomNormal();
+            increment *= Math.sqrt(timeStep);
+            increment *= sigma;
+            increment += (mu - ((sigma * sigma) / 2)) * timeStep;
+            increments[step] = Math.exp(increment);
+        }
+        // Return the cumulative product of increments from initial value.
+        increments[0] = initial;
+        for (step = 1; step < increments.length; step += 1) {
+            increments[step] = increments[step - 1] * increments[step];
+        }
+        return increments;
+    };
+
+}(d3, fc));
 (function(d3, fc) {
     'use strict';
 
@@ -1265,18 +1590,20 @@
             var multi = fc.series.multi()
                 .xScale(xScale)
                 .yScale(yScale)
-                .series([area, upperLine, lowerLine, averageLine]);
+                .series([area, upperLine, lowerLine, averageLine])
+                .decorate(function(g) {
+                    g.enter()
+                        .attr('class', function(d, i) {
+                            return 'multi ' + ['area', 'upper', 'lower', 'average'][i];
+                        });
+                });
 
             area.xValue(xValue);
             upperLine.xValue(xValue);
             averageLine.xValue(xValue);
             lowerLine.xValue(xValue);
 
-            selection.each(function(data) {
-                d3.select(this)
-                    .data([data])
-                    .call(multi);
-            });
+            selection.call(multi);
         };
 
         bollingerBands.xScale = function(x) {
@@ -1335,35 +1662,26 @@
 
         var macd = function(selection) {
 
-            macdLine
-                .xValue(xValue)
-                .yValue(function(d, i) { return root(d).macd; })
-                .decorate(function(path) {
-                    path.classed('macd', true);
-                });
+            macdLine.xValue(xValue)
+                .yValue(function(d, i) { return root(d).macd; });
 
-            signalLine
-                .xValue(xValue)
-                .yValue(function(d, i) { return root(d).signal; })
-                .decorate(function(path) {
-                    path.classed('signal', true);
-                });
+            signalLine.xValue(xValue)
+                .yValue(function(d, i) { return root(d).signal; });
 
-            divergenceBar
-                .xValue(xValue)
+            divergenceBar.xValue(xValue)
                 .yValue(function(d, i) { return root(d).divergence; });
 
-            multiSeries
-                .xScale(xScale)
+            multiSeries.xScale(xScale)
                 .yScale(yScale)
-                .series([divergenceBar, macdLine, signalLine]);
+                .series([divergenceBar, macdLine, signalLine])
+                .decorate(function(g) {
+                    g.enter()
+                        .attr('class', function(d, i) {
+                            return ['divergence', 'macd', 'signal'][i];
+                        });
+                });
 
-            selection.each(function(data) {
-                d3.select(this)
-                    .append('g')
-                    .classed('macd-indicator', true)
-                    .call(multiSeries);
-            });
+            selection.call(multiSeries);
         };
 
         macd.xScale = function(x) {
@@ -1886,21 +2204,19 @@
             .y0(y0)
             .y1(y1);
 
+        var dataJoin = fc.util.dataJoin()
+            .selector('path.area')
+            .element('path')
+            .attrs({'class': 'area'});
+
         var area = function(selection) {
 
-            selection.each(function(data) {
+            selection.each(function(data, index) {
 
-                var path = d3.select(this)
-                    .selectAll('path.area')
-                    .data([data]);
-
-                path.enter()
-                    .append('path')
-                    .attr('class', 'area');
-
+                var path = dataJoin(this, [data]);
                 path.attr('d', areaData);
 
-                decorate(path);
+                decorate(path, data, index);
             });
         };
 
@@ -1965,16 +2281,16 @@
             xScale = d3.time.scale(),
             yScale = d3.scale.linear();
 
+        var dataJoin = fc.util.dataJoin()
+            .selector('g.axis-adapter')
+            .element('g')
+            .attrs({'class': 'axis axis-adapter'});
+
         var axisAdapter = function(selection) {
 
-            selection.each(function(data) {
+            selection.each(function(data, index) {
 
-                var container = d3.select(this);
-
-                var g = fc.util.simpleDataJoin(container, 'axis-adapter', [data]);
-
-                g.enter()
-                    .attr('class', 'axis axis-adapter');
+                var g = dataJoin(this, [data]);
 
                 switch (axisAdapter.orient()) {
                     case 'top':
@@ -1995,7 +2311,7 @@
 
                 g.call(axis);
 
-                decorate(g);
+                decorate(g, data, index);
             });
         };
 
@@ -2046,11 +2362,15 @@
             y0Value = d3.functor(0),
             barWidth = fc.util.fractionalBarWidth(0.75);
 
+        var dataJoin = fc.util.dataJoin()
+            .selector('g.bar')
+            .element('g')
+            .attrs({'class': 'bar'});
+
         var xValueScaled = function(d, i) { return xScale(xValue(d, i)); };
 
         var bar = function(selection) {
-            selection.each(function(data) {
-                var container = d3.select(this);
+            selection.each(function(data, index) {
 
                 var filteredData = data.filter(function(d, i) {
                     return y0Value(d, i) !== undefined &&
@@ -2058,7 +2378,7 @@
                         xValue(d, i) !== undefined;
                 });
 
-                var g = fc.util.simpleDataJoin(container, 'bar', filteredData, xValue);
+                var g = dataJoin.key(xValue)(this, filteredData);
 
                 var width = barWidth(filteredData.map(xValueScaled));
 
@@ -2089,7 +2409,7 @@
                         .attr('d', pathGenerator([d]));
                 });
 
-                decorate(g);
+                decorate(g, filteredData, index);
             });
         };
 
@@ -2162,15 +2482,18 @@
             yCloseValue = function(d, i) { return d.close; },
             barWidth = fc.util.fractionalBarWidth(0.75);
 
+        var dataJoin = fc.util.dataJoin()
+            .selector('g.candlestick')
+            .element('g')
+            .attrs({'class': 'candlestick'});
+
         var xValueScaled = function(d, i) { return xScale(xValue(d, i)); };
 
         var candlestick = function(selection) {
 
-            selection.each(function(data) {
+            selection.each(function(data, index) {
 
-                var container = d3.select(this);
-
-                var g = fc.util.simpleDataJoin(container, 'candlestick', data, xValue);
+                var g = dataJoin.key(xValue)(this, data);
 
                 g.enter()
                     .append('path');
@@ -2205,7 +2528,7 @@
                         .attr('d', pathGenerator([d]));
                 });
 
-                decorate(g);
+                decorate(g, data, index);
             });
         };
 
@@ -2291,11 +2614,14 @@
             subSeries = fc.series.line(),
             barWidth = fc.util.fractionalBarWidth(0.75);
 
+        var dataJoin = fc.util.dataJoin()
+            .selector('g.cycle')
+            .element('g')
+            .attrs({'class': 'cycle'});
+
         var cycle = function(selection) {
 
-            selection.each(function(data) {
-
-                var container = d3.select(this);
+            selection.each(function(data, index) {
 
                 var dataByX = d3.nest()
                     .key(xValue)
@@ -2306,7 +2632,7 @@
                 var width = barWidth(xValues.map(xScale)),
                     halfWidth = width / 2;
 
-                var g = fc.util.simpleDataJoin(container, 'cycle', xValues);
+                var g = dataJoin(this, xValues);
 
                 g.each(function(d, i) {
 
@@ -2325,7 +2651,7 @@
 
                 });
 
-                decorate(g);
+                decorate(g, xValues, index);
             });
         };
 
@@ -2406,21 +2732,19 @@
             .x(x)
             .y(y);
 
+        var dataJoin = fc.util.dataJoin()
+            .selector('path.line')
+            .element('path')
+            .attrs({'class': 'line'});
+
         var line = function(selection) {
 
-            selection.each(function(data) {
+            selection.each(function(data, index) {
 
-                var path = d3.select(this)
-                    .selectAll('path.line')
-                    .data([data]);
-
-                path.enter()
-                    .append('path')
-                    .attr('class', 'line');
-
+                var path = dataJoin(this, [data]);
                 path.attr('d', lineData);
 
-                decorate(path);
+                decorate(path, data, index);
             });
         };
 
@@ -2480,13 +2804,14 @@
             yScale = d3.scale.linear(),
             series = [],
             mapping = fc.util.fn.context,
-            key = fc.util.fn.index;
+            key = fc.util.fn.index,
+            decorate = fc.util.fn.noop;
 
         var dataJoin = fc.util.dataJoin()
-            .children(true)
             .selector('g.multi')
-            .element('g')
+            .children(true)
             .attrs({'class': 'multi'})
+            .element('g')
             .key(function(d, i) {
                 // This function is invoked twice, the first pass is to pull the key
                 // value from the DOM nodes and the second pass is to pull the key
@@ -2503,22 +2828,24 @@
 
             selection.each(function(data) {
 
-                dataJoin(this, series)
-                    .each(function(series, i) {
+                var g = dataJoin(this, series);
 
-                        // We must always assign the series to the node, as the order
-                        // may have changed. N.B. in such a case the output is most
-                        // likely garbage (containers should not be re-used) but by
-                        // doing this we at least make it debuggable garbage :)
-                        this.__series__ = series;
+                g.each(function(series, i) {
+                    // We must always assign the series to the node, as the order
+                    // may have changed. N.B. in such a case the output is most
+                    // likely garbage (containers should not be re-used) but by
+                    // doing this we at least make it debuggable garbage :)
+                    this.__series__ = series;
 
-                        (series.xScale || series.x).call(series, xScale);
-                        (series.yScale || series.y).call(series, yScale);
+                    (series.xScale || series.x).call(series, xScale);
+                    (series.yScale || series.y).call(series, yScale);
 
-                        d3.select(this)
-                            .datum(mapping.call(data, series, i))
-                            .call(series);
-                    });
+                    d3.select(this)
+                        .datum(mapping.call(data, series, i))
+                        .call(series);
+                });
+
+                decorate(g);
             });
         };
 
@@ -2557,6 +2884,13 @@
             key = x;
             return multi;
         };
+        multi.decorate = function(x) {
+            if (!arguments.length) {
+                return decorate;
+            }
+            decorate = x;
+            return multi;
+        };
 
         return multi;
     };
@@ -2579,12 +2913,15 @@
 
         var xValueScaled = function(d, i) { return xScale(xValue(d, i)); };
 
+        var dataJoin = fc.util.dataJoin()
+            .selector('g.ohlc')
+            .element('g')
+            .attrs({'class': 'ohlc'});
+
         var ohlc = function(selection) {
-            selection.each(function(data) {
+            selection.each(function(data, index) {
 
-                var container = d3.select(this);
-
-                var g = fc.util.simpleDataJoin(container, 'ohlc', data, xValue);
+                var g = dataJoin.key(xValue)(this, data);
 
                 g.enter()
                     .append('path');
@@ -2618,7 +2955,7 @@
                         .attr('d', pathGenerator([d]));
                 });
 
-                decorate(g);
+                decorate(g, data, index);
             });
         };
 
@@ -2702,13 +3039,16 @@
             xValue = function(d, i) { return d.date; },
             radius = d3.functor(5);
 
+        var dataJoin = fc.util.dataJoin()
+            .selector('g.point')
+            .element('g')
+            .attrs({'class': 'point'});
+
         var point = function(selection) {
 
-            selection.each(function(data) {
+            selection.each(function(data, index) {
 
-                var container = d3.select(this);
-
-                var g = fc.util.simpleDataJoin(container, 'point', data, xValue);
+                var g = dataJoin.key(xValue)(this, data);
 
                 g.enter()
                     .append('circle');
@@ -2722,7 +3062,7 @@
                 g.select('circle')
                     .attr('r', radius);
 
-                decorate(g);
+                decorate(g, data, index);
             });
         };
 
@@ -2777,93 +3117,121 @@
 (function(d3, fc) {
     'use strict';
 
-    fc.series.stackedBar = function() {
+    fc.series.stacked.area = function() {
 
-        var decorate = fc.util.fn.noop,
-            barWidth = fc.util.fractionalBarWidth(0.75),
-            xScale = d3.time.scale(),
-            yScale = d3.scale.linear(),
-            // Implicitly dependant on the implementation of the stack layout's `out`.
-            y0Value = function(d, i) { return d.y0; };
+        var area = fc.series.area()
+            .yValue(function(d) { return d.y0 + d.y; })
+            .y0Value(function(d) { return d.y0; });
 
-        var stackLayout = d3.layout.stack();
+        var stack = fc.series.stacked.stack()
+            .series(area);
+
+        var stackedArea = function(selection) {
+            selection.call(stack);
+        };
+
+        return fc.util.rebind(stackedArea, area, {
+            decorate: 'decorate',
+            xScale: 'xScale',
+            yScale: 'yScale',
+            xValue: 'xValue',
+            y0Value: 'y0Value',
+            y1Value: 'y1Value',
+            yValue: 'yValue'
+        });
+    };
+
+}(d3, fc));
+
+(function(d3, fc) {
+    'use strict';
+
+    fc.series.stacked.bar = function() {
+
+        var bar = fc.series.bar()
+            .yValue(function(d) { return d.y0 + d.y; })
+            .y0Value(function(d) { return d.y0; });
+
+        var stack = fc.series.stacked.stack()
+            .series(bar);
 
         var stackedBar = function(selection) {
+            selection.call(stack);
+        };
 
-            var bar = fc.series.bar()
-                .xScale(xScale)
-                .yScale(yScale)
-                .xValue(stackLayout.x())
-                .yValue(function(d) { return y0Value(d) + stackLayout.y()(d); })
-                .y0Value(y0Value);
+        return fc.util.rebind(stackedBar, bar, {
+            decorate: 'decorate',
+            xScale: 'xScale',
+            yScale: 'yScale',
+            xValue: 'xValue',
+            y0Value: 'y0Value',
+            y1Value: 'y1Value',
+            yValue: 'yValue',
+            barWidth: 'barWidth'
+        });
+    };
+
+}(d3, fc));
+(function(d3, fc) {
+    'use strict';
+
+    fc.series.stacked.line = function() {
+
+        var line = fc.series.line()
+            .yValue(function(d) { return d.y0 + d.y; });
+
+        var stack = fc.series.stacked.stack()
+            .series(line);
+
+        var stackedLine = function(selection) {
+            selection.call(stack);
+        };
+
+        return fc.util.rebind(stackedLine, line, {
+            decorate: 'decorate',
+            xScale: 'xScale',
+            yScale: 'yScale',
+            xValue: 'xValue',
+            yValue: 'yValue'
+        });
+    };
+
+}(d3, fc));
+
+(function(d3, fc) {
+    'use strict';
+
+    fc.series.stacked.stack = function() {
+
+        var series = fc.util.fn.noop;
+
+        var stack = function(selection) {
 
             selection.each(function(data) {
 
-                var layers = stackLayout(data);
-
                 var container = d3.select(this);
 
-                // Pull data from series objects.
-                var layeredData = layers.map(stackLayout.values());
+                var dataJoin = fc.util.dataJoin()
+                    .selector('g.stacked')
+                    .element('g')
+                    .attrs({'class': 'stacked'});
 
-                var series = container.selectAll('g.stacked-bar')
-                    .data(layeredData)
-                    .enter()
-                    .append('g')
-                    .attr('class', 'stacked-bar')
-                    .call(bar);
-
-                decorate(series);
+                dataJoin(container, data)
+                    .call(series);
             });
         };
 
-        stackedBar.decorate = function(x) {
+        stack.series = function(x) {
             if (!arguments.length) {
-                return decorate;
+                return series;
             }
-            decorate = x;
-            return stackedBar;
-        };
-        stackedBar.barWidth = function(x) {
-            if (!arguments.length) {
-                return barWidth;
-            }
-            barWidth = x;
-            return stackedBar;
-        };
-        stackedBar.xScale = function(x) {
-            if (!arguments.length) {
-                return xScale;
-            }
-            xScale = x;
-            return stackedBar;
-        };
-        stackedBar.yScale = function(x) {
-            if (!arguments.length) {
-                return yScale;
-            }
-            yScale = x;
-            return stackedBar;
-        };
-        stackedBar.y0Value = function(x) {
-            if (!arguments.length) {
-                return y0Value;
-            }
-            y0Value = x;
-            return stackedBar;
+            series = x;
+            return stack;
         };
 
-        return fc.util.rebind(stackedBar, stackLayout, {
-            xValue: 'x',
-            yValue: 'y',
-            out: 'out',
-            offset: 'offset',
-            values: 'values',
-            order: 'order'
-        });
+        return stack;
     };
 }(d3, fc));
-
 (function(d3, fc) {
     'use strict';
 
@@ -2874,21 +3242,36 @@
 
         var x = function(d, i) { return d.x; },
             y = function(d, i) { return d.y; },
+            align = 'center',
             height = function(d, i) { return d.height; },
             width = d3.functor(3);
 
-        var bar = function(data) {
+        var bar = function(data, index) {
 
             return data.map(function(d, i) {
-                var xValue = x(d, i),
-                    yValue = y(d, i),
-                    barHeight = height(d, i),
-                    barWidth = width(d, i);
+                var xValue = x.call(this, d, index || i),
+                    yValue = y.call(this, d, index || i),
+                    barHeight = height.call(this, d, index || i),
+                    barWidth = width.call(this, d, index || i);
 
-                var halfWidth = barWidth / 2;
+                var offset;
+
+                switch (align) {
+                    case 'left':
+                        offset = barWidth;
+                        break;
+                    case 'right':
+                        offset = 0;
+                        break;
+                    case 'center':
+                        offset = barWidth / 2;
+                        break;
+                    default:
+                        throw new Error('Invalid alignment');
+                }
 
                 // Move to the start location
-                var body = 'M' + (xValue - halfWidth) + ',' + yValue +
+                var body = 'M' + (xValue - offset) + ',' + yValue +
                     // Draw the width
                     'h' + barWidth +
                     // Draw to the top
@@ -2898,7 +3281,7 @@
                     // Close the path
                     'z';
                 return body;
-            })
+            }, this)
             .join('');
         };
 
@@ -2921,6 +3304,13 @@
                 return width;
             }
             width = d3.functor(x);
+            return bar;
+        };
+        bar.align = function(x) {
+            if (!arguments.length) {
+                return align;
+            }
+            align = x;
             return bar;
         };
         bar.height = function(x) {
@@ -3169,11 +3559,13 @@
 
         var crosshair = function(selection) {
 
-            selection.each(function(data) {
+            selection.each(function(data, index) {
 
                 var container = d3.select(this)
                     .style('pointer-events', 'all')
-                    .on('mouseenter.crosshair', mouseenter);
+                    .on('mouseenter.crosshair', mouseenter)
+                    .on('mousemove.crosshair', mousemove)
+                    .on('mouseleave.crosshair', mouseleave);
 
                 var overlay = container.selectAll('rect')
                     .data([data]);
@@ -3214,15 +3606,13 @@
 
                 crosshair.call(multi);
 
-                decorate(crosshair);
+                decorate(crosshair, data, index);
             });
         };
 
         function mouseenter() {
             var mouse = d3.mouse(this);
-            var container = d3.select(this)
-                .on('mousemove.crosshair', mousemove)
-                .on('mouseleave.crosshair', mouseleave);
+            var container = d3.select(this);
             var snapped = snap.apply(this, mouse);
             var data = container.datum();
             data.push(snapped);
@@ -3244,9 +3634,7 @@
             var container = d3.select(this);
             var data = container.datum();
             data.pop();
-            container.call(crosshair)
-                .on('mousemove.crosshair', null)
-                .on('mouseleave.crosshair', null);
+            container.call(crosshair);
             event.trackingend.apply(this, arguments);
         }
 
@@ -3310,9 +3698,14 @@
         var x = function(d) { return d.xInDomainUnits ? xScale(d.x) : d.x; },
             y = function(d) { return d.yInDomainUnits ? yScale(d.y) : d.y; };
 
+        var dataJoin = fc.util.dataJoin()
+            .selector('g.fan')
+            .element('g')
+            .attrs({'class': 'fan'});
+
         var fan = function(selection) {
 
-            selection.each(function(data) {
+            selection.each(function(data, index) {
 
                 var container = d3.select(this)
                     .style('pointer-events', 'all')
@@ -3331,7 +3724,7 @@
                     .attr('width', xScale.range()[1])
                     .attr('height', yScale.range()[0]);
 
-                var g = fc.util.simpleDataJoin(container, 'fan', data);
+                var g = dataJoin(container, data);
 
                 g.each(function(d) {
                     d.x = xScale.range()[1];
@@ -3402,7 +3795,7 @@
                     })
                     .style('visibility', function(d) { return d.state !== 'DONE' ? 'hidden' : 'visible'; });
 
-                decorate(g);
+                decorate(g, data, index);
             });
         };
 
@@ -3534,9 +3927,14 @@
         var x = function(d) { return d.xInDomainUnits ? xScale(d.x) : d.x; },
             y = function(d) { return d.yInDomainUnits ? yScale(d.y) : d.y; };
 
+        var dataJoin = fc.util.dataJoin()
+            .selector('g.measure')
+            .element('g')
+            .attrs({'class': 'measure'});
+
         var measure = function(selection) {
 
-            selection.each(function(data) {
+            selection.each(function(data, index) {
 
                 var container = d3.select(this)
                     .style('pointer-events', 'all')
@@ -3555,7 +3953,7 @@
                     .attr('width', xScale.range()[1])
                     .attr('height', yScale.range()[0]);
 
-                var g = fc.util.simpleDataJoin(container, 'measure', data);
+                var g = dataJoin(container, data);
 
                 var enter = g.enter();
                 enter.append('line')
@@ -3603,7 +4001,7 @@
                     .style('visibility', function(d) { return d.state !== 'DONE' ? 'hidden' : 'visible'; })
                     .text(yLabel);
 
-                decorate(g);
+                decorate(g, data, index);
             });
         };
 
@@ -3764,7 +4162,10 @@
 
         var dataJoin = function(container, data) {
 
-            if (!(container instanceof d3.selection)) {
+            var joinedData = data || fc.util.fn.identity;
+
+            // Can't use instanceof d3.selection (see #458)
+            if (!(container.selectAll && container.node)) {
                 container = d3.select(container);
             }
 
@@ -3777,7 +4178,7 @@
                     return this.parentNode === container.node();
                 });
             }
-            var updateSelection = selection.data(data, key);
+            var updateSelection = selection.data(joinedData, key);
 
             // enter
             // when container is a transition, entering elements fade in (from transparent to opaque)
@@ -3827,7 +4228,16 @@
             if (!arguments.length) {
                 return attrs;
             }
-            attrs = x;
+
+            if (arguments.length === 1) {
+                attrs = arguments[0];
+            } else if (arguments.length === 2) {
+                var key = arguments[0];
+                var value = arguments[1];
+
+                attrs[key] = value;
+            }
+
             return dataJoin;
         };
         dataJoin.key = function(x) {
@@ -3969,48 +4379,6 @@
         return target;
     };
 
-}(d3, fc));
-
-(function(d3, fc) {
-    'use strict';
-
-    fc.util.simpleDataJoin = function(parent, className, data, dataKey) {
-        // "Caution: avoid interpolating to or from the number zero when the interpolator is used to generate
-        // a string (such as with attr).
-        // Very small values, when stringified, may be converted to scientific notation and
-        // cause a temporarily invalid attribute or style property value.
-        // For example, the number 0.0000001 is converted to the string "1e-7".
-        // This is particularly noticeable when interpolating opacity values.
-        // To avoid scientific notation, start or end the transition at 1e-6,
-        // which is the smallest value that is not stringified in exponential notation."
-        // - https://github.com/mbostock/d3/wiki/Transitions#d3_interpolateNumber
-        var effectivelyZero = 1e-6;
-
-        // update
-        var updateSelection = parent.selectAll('g.' + className)
-            .data(data, dataKey || fc.util.fn.index);
-
-        // enter
-        // when 'parent' is a transition, entering elements fade in (from transparent to opaque)
-        var enterSelection = updateSelection.enter()
-            .append('g')
-            .classed(className, true)
-            .style('opacity', effectivelyZero);
-
-        // exit
-        // when 'parent' is a transition, exiting elements fade out (from opaque to transparent)
-        var exitSelection = d3.transition(updateSelection.exit())
-            .style('opacity', effectivelyZero)
-            .remove();
-
-        // when 'parent' is a transition, all properties of the transition (which can be interpolated) will transition
-        updateSelection = d3.transition(updateSelection)
-            .style('opacity', 1);
-
-        updateSelection.enter = d3.functor(enterSelection);
-        updateSelection.exit = d3.functor(exitSelection);
-        return updateSelection;
-    };
 }(d3, fc));
 
 (function(d3, fc) {

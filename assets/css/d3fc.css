@@ -13,6 +13,11 @@
   stroke: #ccc;
   stroke-width: 1.0;
 }
+
+.annotation .band {
+  fill: black;
+  opacity: 0.1;
+}
 .sparkline .line {
   stroke: #999
 }
@@ -26,6 +31,14 @@
 
 .sparkline .low {
   fill: red;
+}
+
+.legend {
+  border: 1px solid #999;
+}
+
+.plot-area {
+  overflow: hidden;
 }
 /* Default Chart Styles */
 .chart {
@@ -52,18 +65,18 @@
   stroke: #eee;
   fill: #fefefe;
 }
-.macd-indicator .bar>path {
+.divergence .bar>path {
   stroke: grey;
   fill: grey;
   fill-opacity: 1.0;
 }
 
-.macd-indicator .signal {
+.signal path.line {
   fill: none;
   stroke: red;
 }
 
-.macd-indicator .macd {
+.macd path.line {
   fill: none;
   stroke: #06c;
 }
