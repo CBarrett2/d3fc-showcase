@@ -13,26 +13,17 @@
 
     var width = 500;
     var height = 300;
+    var mainAspect = height / width;
     var rsiHeight = height / 2;
+    var rsiAspect = rsiHeight / width;
     var navHeight = height / 3;
-
+    var navAspect = navHeight / width;
 
     // Set SVGs
     var container = d3.select('#chart-example');
-    var svgMain = container.select('svg.main')
-        .attr('viewBox', function() { return '0 0 ' + width + ' ' + height; })
-        .attr('width', width)
-        .attr('height', height);
-
-    var svgRSI = container.select('svg.rsi')
-        .attr('viewBox', function() { return '0 0 ' + width + ' ' + rsiHeight; })
-        .attr('width', width)
-        .attr('height', rsiHeight);
-
-    var svgNav = container.select('svg.nav')
-        .attr('viewBox', function() { return '0 0 ' + width + ' ' + navHeight; })
-        .attr('width', width)
-        .attr('height', navHeight);
+    var svgMain = container.select('svg.main');
+    var svgRSI = container.select('svg.rsi');
+    var svgNav = container.select('svg.nav');
 
     var data = fc.data.random.financial()(250);
 
@@ -41,10 +32,11 @@
         .xDomain([data[Math.floor(data.length / 2)].date, data[Math.floor(data.length * 3 / 4)].date])
         .xTicks(6);
 
-    var candlestick = fc.series.candlestick();
     var gridlines = fc.annotation.gridline()
         .yTicks(5)
         .xTicks(0);
+
+    var candlestick = fc.series.candlestick();
 
     // Create and apply the Moving Average
     var movingAverage = fc.indicator.algorithm.movingAverage();
@@ -53,7 +45,7 @@
     var ma = fc.series.line()
         .yValue(function(d) { return d.movingAverage; });
 
-    var multi = fc.series.multi().series([candlestick, gridlines, ma]);
+    var multi = fc.series.multi().series([gridlines, candlestick, ma]);
 
     function zoomCall(zoom, data, scale) {
         return function() {
@@ -65,6 +57,7 @@
             var max = scale(xExtent[1]);
 
             // Don't pan off sides
+            var width = svgMain.attr('width');
             if (min > 0) {
                 tx -= min;
             } else if (max - width < 0) { // or use xScale.range()
@@ -79,7 +72,6 @@
                     zoom.scale(1);
                 }
             }
-
             zoom.translate([tx, ty]);
             render();
         };
@@ -88,7 +80,6 @@
     var mainChart = function(selection) {
         data = selection.datum();
         movingAverage(data);
-
 
         // Scale y axis
         var yExtent = fc.util.extent(getVisibleData(data, timeSeries.xDomain()), ['low', 'high']);
@@ -117,13 +108,12 @@
     var rsiAlgorithm = fc.indicator.algorithm.relativeStrengthIndex();
 
     var rsi = fc.indicator.renderer.relativeStrengthIndex()
-        .xScale(timeSeries.xScale())
         .yScale(rsiScale);
 
     var rsiChart = function(selection) {
         data = selection.datum();
+        rsi.xScale(timeSeries.xScale());
         rsiAlgorithm(data);
-
         // Important for initialization that this happens after timeSeries is called [or can call render() twice]
         var zoom = d3.behavior.zoom();
         zoom.x(timeSeries.xScale())
@@ -161,13 +151,14 @@
             });
 
         // Allow to zoom using mouse, but disable panning
-        var zoom = d3.behavior.zoom()
-            .x(timeSeries.xScale())
+        var zoom = d3.behavior.zoom();
+        zoom.x(timeSeries.xScale())
             .on('zoom', function() {
                 if (zoom.scale() === 1) {
                     zoom.translate([0, 0]);
                 } else {
-                    render();
+                    // Usual behavior
+                    zoomCall(zoom, data, timeSeries.xScale())();
                 }
             });
         selection.call(zoom);
@@ -197,6 +188,30 @@
             .call(navChart);
     }
 
+    function resize() {
+        var marginX = 10; // value should be taken from css/html really
+        var screenWidth = window.innerWidth - (marginX * 2);
+        var maxWidth = width;
+
+        var targetWidth;
+        if (screenWidth < maxWidth) {
+            targetWidth = screenWidth;
+        } else {
+            targetWidth = maxWidth;
+        }
+        svgMain.attr('width', targetWidth)
+            .attr('height', mainAspect * targetWidth);
+        svgRSI.attr('width', targetWidth)
+            .attr('height', rsiAspect * targetWidth);
+        svgNav.attr('width', targetWidth)
+            .attr('height', navAspect * targetWidth);
+        rsi.yScale().range([rsiAspect * targetWidth, 0]);
+        render();
+    }
+
+    d3.select(window).on('resize', resize);
+
+    resize();
     render();
 
 })(d3, fc);
