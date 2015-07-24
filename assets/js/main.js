@@ -178,15 +178,13 @@
         selection.call(navTimeSeries);
     };
 
+    var mainData = svgMain.datum(data);
+    var rsiData = svgRSI.datum(data);
+    var navData = svgNav.datum(data);
     function render() {
-        svgMain.datum(data)
-            .call(mainChart);
-
-        svgRSI.datum(data)
-            .call(rsiChart);
-
-        svgNav.datum(data)
-            .call(navChart);
+        mainData.call(mainChart);
+        rsiData.call(rsiChart);
+        navData.call(navChart);
     }
 
     function resize() {
