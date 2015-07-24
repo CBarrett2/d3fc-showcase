@@ -11,7 +11,9 @@
         return visibleData;
     }
 
-    var width = 500;
+    //var margin = {top: 10, bottom: 10, left: 10, right: 10};
+
+    var width = 600;
     var height = 300;
     var mainAspect = height / width;
     var rsiHeight = height / 2;
@@ -24,7 +26,6 @@
     var svgMain = container.select('svg.main');
     var svgRSI = container.select('svg.rsi');
     var svgNav = container.select('svg.nav');
-
     var data = fc.data.random.financial()(250);
 
     // Create main chart and set how much data is initially viewed
@@ -69,7 +70,6 @@
                     scale.domain(xExtent);
                     zoom.x(scale);
                     tx = scale(xExtent[0]);
-                    console.log(tx);
                 }
             }
 
@@ -190,16 +190,7 @@
     }
 
     function resize() {
-        var marginX = 10; // value should be taken from css/html really
-        var screenWidth = window.innerWidth - (marginX * 2);
-        var maxWidth = width;
-
-        var targetWidth;
-        if (screenWidth < maxWidth) {
-            targetWidth = screenWidth;
-        } else {
-            targetWidth = maxWidth;
-        }
+        var targetWidth = document.getElementById('chart-example').offsetWidth;
         svgMain.attr('width', targetWidth)
             .attr('height', mainAspect * targetWidth);
         svgRSI.attr('width', targetWidth)
