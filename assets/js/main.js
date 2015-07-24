@@ -60,18 +60,19 @@
             var width = svgMain.attr('width');
             if (min > 0) {
                 tx -= min;
-            } else if (max - width < 0) { // or use xScale.range()
+            } else if (max - width < 0) {
                 tx -= (max - width);
             }
-
             // If zooming, and about to pan off screen, do nothing
             if (zoom.scale() !== 1) {
-                if ((min > 0) && (max - width) < 0) {
-                    tx = 0;
+                if ((min >= 0) && (max - width) <= 0) {
                     scale.domain(xExtent);
-                    zoom.scale(1);
+                    zoom.x(scale);
+                    tx = scale(xExtent[0]);
+                    console.log(tx);
                 }
             }
+
             zoom.translate([tx, ty]);
             render();
         };
