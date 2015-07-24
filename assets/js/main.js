@@ -41,49 +41,20 @@
 
     // Create and apply the Moving Average
     var movingAverage = fc.indicator.algorithm.movingAverage();
-
+    movingAverage(data); // needs to be updated when new data comes in
     // Create a line that renders the result
     var ma = fc.series.line()
         .yValue(function(d) { return d.movingAverage; });
 
     var multi = fc.series.multi().series([gridlines, candlestick, ma]);
 
-    function zoomCall(zoom, data, scale) {
-        return function() {
-            var tx = zoom.translate()[0];
-            var ty = zoom.translate()[1];
-
-            var xExtent = fc.util.extent(data, ['date']);
-            var min = scale(xExtent[0]);
-            var max = scale(xExtent[1]);
-
-            // Don't pan off sides
-            var width = svgMain.attr('width');
-            if (min > 0) {
-                tx -= min;
-            } else if (max - width < 0) {
-                tx -= (max - width);
-            }
-            // If zooming, and about to pan off screen, do nothing
-            if (zoom.scale() !== 1) {
-                if ((min >= 0) && (max - width) <= 0) {
-                    scale.domain(xExtent);
-                    zoom.x(scale);
-                    tx = scale(xExtent[0]);
-                }
-            }
-
-            zoom.translate([tx, ty]);
-            render();
-        };
-    }
-
     var mainChart = function(selection) {
         data = selection.datum();
-        movingAverage(data);
+        var visData = getVisibleData(data, timeSeries.xDomain());
+
 
         // Scale y axis
-        var yExtent = fc.util.extent(getVisibleData(data, timeSeries.xDomain()), ['low', 'high']);
+        var yExtent = fc.util.extent(visData, ['low', 'high']);
         // Add 10% either side of extreme high/lows
         var variance = yExtent[1] - yExtent[0];
         yExtent[0] -= variance * 0.1;
@@ -107,14 +78,14 @@
         .domain([0, 100])
         .range([rsiHeight, 0]);
     var rsiAlgorithm = fc.indicator.algorithm.relativeStrengthIndex();
-
+    rsiAlgorithm(data); // Also needs to be updated when new data comes in
     var rsi = fc.indicator.renderer.relativeStrengthIndex()
         .yScale(rsiScale);
 
     var rsiChart = function(selection) {
         data = selection.datum();
         rsi.xScale(timeSeries.xScale());
-        rsiAlgorithm(data);
+
         // Important for initialization that this happens after timeSeries is called [or can call render() twice]
         var zoom = d3.behavior.zoom();
         zoom.x(timeSeries.xScale())
@@ -178,12 +149,41 @@
         selection.call(navTimeSeries);
     };
 
-    var navData = svgNav.datum(data);
+    function zoomCall(zoom, data, scale) {
+        return function() {
+            var tx = zoom.translate()[0];
+            var ty = zoom.translate()[1];
+
+            var xExtent = fc.util.extent(data, ['date']);
+            var min = scale(xExtent[0]);
+            var max = scale(xExtent[1]);
+
+            // Don't pan off sides
+            var width = svgMain.attr('width');
+            if (min > 0) {
+                tx -= min;
+            } else if (max - width < 0) {
+                tx -= (max - width);
+            }
+            // If zooming, and about to pan off screen, do nothing
+            if (zoom.scale() !== 1) {
+                if ((min >= 0) && (max - width) <= 0) {
+                    scale.domain(xExtent);
+                    zoom.x(scale);
+                    tx = scale(xExtent[0]);
+                }
+            }
+
+            zoom.translate([tx, ty]);
+            render();
+        };
+    }
+
+    var navData = svgNav.datum(data); // Needs to be updated when new data comes in
     function render() {
-        var visData = getVisibleData(data, timeSeries.xDomain());
-        svgMain.datum(visData)
+        svgMain.datum(data)
             .call(mainChart);
-        svgRSI.datum(visData)
+        svgRSI.datum(data)
             .call(rsiChart);
         navData.call(navChart);
     }
