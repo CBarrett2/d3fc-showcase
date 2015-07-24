@@ -54,29 +54,6 @@
 
     function zoomCall(zoom, data, scale) {
         return function() {
-            var tx = zoom.translate()[0];
-            var ty = zoom.translate()[1];
-
-            var xExtent = fc.util.extent(data, ['date']);
-            var min = scale(xExtent[0]);
-            var max = scale(xExtent[1]);
-
-            // Don't pan off sides
-            if (min > 0) {
-                tx -= min;
-            } else if (max - width < 0) { // or use xScale.range()
-                tx -= (max - width);
-            }
-
-            // If zooming, and about to pan off screen, do nothing
-            if (zoom.scale() !== 1) {
-                if ((min > 0) && (max - width) < 0) {
-                    tx = 0;
-                    scale.domain(xExtent);
-                    zoom.scale(1);
-                }
-            }
-            zoom.translate([tx, ty]);
             render();
         };
     }
