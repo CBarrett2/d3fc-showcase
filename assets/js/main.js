@@ -127,7 +127,7 @@
     var navTimeSeries = fc.chart.linearTimeSeries()
         .xDomain(fc.util.extent(data, 'date'))
         .yDomain(yExtent)
-        .yTicks(4);
+        .yTicks(5);
 
     var area = fc.series.area()
         .yValue(function(d) { return d.open; })
