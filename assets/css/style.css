@@ -3,7 +3,8 @@ path.line {
 }
 
 #chart-example {
-  position: relative;
+  position: absolute;
+  left: 10px;
   top: 10px;
 } 
 
@@ -11,16 +12,4 @@ path.line {
   stroke: #D1D1E0;
   fill-opacity: 0.125;
   shape-rendering: crispEdges;
-}
-
-
-@media (min-width: 600px){
-  .container {
-    width: 600px;
-  }
-}
-@media (max-width: 600px){
-  .container {
-    width: 100%;
-  }
 }

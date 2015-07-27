@@ -11,9 +11,7 @@
         return visibleData;
     }
 
-    //var margin = {top: 10, bottom: 10, left: 10, right: 10};
-
-    var width = 600;
+    var width = 500;
     var height = 300;
     var mainAspect = height / width;
     var rsiHeight = height / 2;
@@ -26,6 +24,7 @@
     var svgMain = container.select('svg.main');
     var svgRSI = container.select('svg.rsi');
     var svgNav = container.select('svg.nav');
+
     var data = fc.data.random.financial()(250);
 
     // Create main chart and set how much data is initially viewed
@@ -41,20 +40,49 @@
 
     // Create and apply the Moving Average
     var movingAverage = fc.indicator.algorithm.movingAverage();
-    movingAverage(data); // needs to be updated when new data comes in
+
     // Create a line that renders the result
     var ma = fc.series.line()
         .yValue(function(d) { return d.movingAverage; });
 
     var multi = fc.series.multi().series([gridlines, candlestick, ma]);
 
+    function zoomCall(zoom, data, scale) {
+        return function() {
+            var tx = zoom.translate()[0];
+            var ty = zoom.translate()[1];
+
+            var xExtent = fc.util.extent(data, ['date']);
+            var min = scale(xExtent[0]);
+            var max = scale(xExtent[1]);
+
+            // Don't pan off sides
+            var width = svgMain.attr('width');
+            if (min > 0) {
+                tx -= min;
+            } else if (max - width < 0) {
+                tx -= (max - width);
+            }
+            // If zooming, and about to pan off screen, do nothing
+            if (zoom.scale() !== 1) {
+                if ((min >= 0) && (max - width) <= 0) {
+                    scale.domain(xExtent);
+                    zoom.x(scale);
+                    tx = scale(xExtent[0]);
+                }
+            }
+
+            zoom.translate([tx, ty]);
+            render();
+        };
+    }
+
     var mainChart = function(selection) {
         data = selection.datum();
-        var visData = getVisibleData(data, timeSeries.xDomain());
-
+        movingAverage(data);
 
         // Scale y axis
-        var yExtent = fc.util.extent(visData, ['low', 'high']);
+        var yExtent = fc.util.extent(getVisibleData(data, timeSeries.xDomain()), ['low', 'high']);
         // Add 10% either side of extreme high/lows
         var variance = yExtent[1] - yExtent[0];
         yExtent[0] -= variance * 0.1;
@@ -78,14 +106,14 @@
         .domain([0, 100])
         .range([rsiHeight, 0]);
     var rsiAlgorithm = fc.indicator.algorithm.relativeStrengthIndex();
-    rsiAlgorithm(data); // Also needs to be updated when new data comes in
+
     var rsi = fc.indicator.renderer.relativeStrengthIndex()
         .yScale(rsiScale);
 
     var rsiChart = function(selection) {
         data = selection.datum();
         rsi.xScale(timeSeries.xScale());
-
+        rsiAlgorithm(data);
         // Important for initialization that this happens after timeSeries is called [or can call render() twice]
         var zoom = d3.behavior.zoom();
         zoom.x(timeSeries.xScale())
@@ -149,47 +177,28 @@
         selection.call(navTimeSeries);
     };
 
-    function zoomCall(zoom, data, scale) {
-        return function() {
-            var tx = zoom.translate()[0];
-            var ty = zoom.translate()[1];
-
-            var xExtent = fc.util.extent(data, ['date']);
-            var min = scale(xExtent[0]);
-            var max = scale(xExtent[1]);
-
-            // Don't pan off sides
-            var width = svgMain.attr('width');
-            if (min > 0) {
-                tx -= min;
-            } else if (max - width < 0) {
-                tx -= (max - width);
-            }
-            // If zooming, and about to pan off screen, do nothing
-            if (zoom.scale() !== 1) {
-                if ((min >= 0) && (max - width) <= 0) {
-                    scale.domain(xExtent);
-                    zoom.x(scale);
-                    tx = scale(xExtent[0]);
-                }
-            }
-
-            zoom.translate([tx, ty]);
-            render();
-        };
-    }
-
-    var navData = svgNav.datum(data); // Needs to be updated when new data comes in
     function render() {
         svgMain.datum(data)
             .call(mainChart);
+
         svgRSI.datum(data)
             .call(rsiChart);
-        navData.call(navChart);
+
+        svgNav.datum(data)
+            .call(navChart);
     }
 
     function resize() {
-        var targetWidth = document.getElementById('chart-example').offsetWidth;
+        var marginX = 10; // value should be taken from css/html really
+        var screenWidth = window.innerWidth - (marginX * 2);
+        var maxWidth = width;
+
+        var targetWidth;
+        if (screenWidth < maxWidth) {
+            targetWidth = screenWidth;
+        } else {
+            targetWidth = maxWidth;
+        }
         svgMain.attr('width', targetWidth)
             .attr('height', mainAspect * targetWidth);
         svgRSI.attr('width', targetWidth)
