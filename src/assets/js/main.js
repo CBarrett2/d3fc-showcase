@@ -20,6 +20,16 @@
     var svgMain = container.select('svg.main');
     var svgRSI = container.select('svg.rsi');
     var svgNav = container.select('svg.nav');
+    
+    var targetWidth = width;
+    svgMain.attr('width', targetWidth)
+            .attr('height', mainAspect * targetWidth);
+        svgRSI.attr('width', targetWidth)
+            .attr('height', rsiAspect * targetWidth);
+        svgNav.attr('width', targetWidth)
+            .attr('height', navAspect * targetWidth);
+        //rsi.yScale().range([rsiAspect * targetWidth, 0]);
+
 
     var mainAspect = 0.6;
     var rsiAspect = 0.3;
@@ -27,6 +37,10 @@
     var heightWidthAspect = mainAspect + rsiAspect + navAspect;
 
     var data = fc.data.random.financial()(250);
+
+    //var data = fc.data.random.financial()(250);
+    //var stream = fc.data.stream();
+
 
     // Using golden ratio to make initial display area rectangle into the golden rectangle
     var goldenRatio = 1.618;
@@ -114,11 +128,14 @@
     }
 
     var mainChart = function(selection) {
-        data = selection.datum();
+        var data = selection.datum();
+        
         movingAverage(data);
 
         // Scale y axis
         var yExtent = fc.util.extent(getVisibleData(data, timeSeries.xDomain()), ['low', 'high']);
+        //var yExtent = fc.util.extent(data, ['low', 'high']);
+        //console.log("yextent: " + yExtent);
         // Add 10% either side of extreme high/lows
         var variance = yExtent[1] - yExtent[0];
         yExtent[0] -= variance * 0.1;
@@ -147,7 +164,7 @@
         .yScale(rsiScale);
 
     var rsiChart = function(selection) {
-        data = selection.datum();
+        var data = selection.datum();
         rsi.xScale(timeSeries.xScale());
         rsiAlgorithm(data);
         // Important for initialization that this happens after timeSeries is called [or can call render() twice]
@@ -159,15 +176,11 @@
     };
 
     // Create navigation chart
-    var yExtent = fc.util.extent(getVisibleData(data, fc.util.extent(data, 'date')), ['low', 'high']);
     var navTimeSeries = fc.chart.linearTimeSeries()
-        .xDomain(fc.util.extent(data, 'date'))
-        .yDomain(yExtent)
-        .yTicks(5);
+        .yTicks(4);
 
     var area = fc.series.area()
-        .yValue(function(d) { return d.open; })
-        .y0Value(yExtent[0]);
+        .yValue(function(d) { return d.open; });
 
     var line = fc.series.line()
         .yValue(function(d) { return d.open; });
@@ -176,8 +189,13 @@
     var navMulti = fc.series.multi().series([area, line, brush]);
 
     var navChart = function(selection) {
-        data = selection.datum();
-
+        var data = selection.datum();
+        
+        var yExtent = fc.util.extent(data, ['low', 'high']);
+        navTimeSeries.xDomain(fc.util.extent(data, 'date'))
+            .yDomain(yExtent);
+        
+        
         brush.on('brush', function() {
                 if (brush.extent()[0][0] - brush.extent()[1][0] !== 0) {
                     // Control the main chart's time series domain
@@ -213,15 +231,16 @@
         selection.call(navTimeSeries);
     };
 
-    function render() {
-        svgMain.datum(data)
-            .call(mainChart);
-
-        svgRSI.datum(data)
-            .call(rsiChart);
-
-        svgNav.datum(data)
-            .call(navChart);
+    //var oldData = [];
+    function render(data) { // shouldn't have to call render(data) now in other calls. maybe seperate into a render and a updateData function
+        if (data) {
+            svgMain.datum(data);
+            svgRSI.datum(data)
+            svgNav.datum(data)
+        }
+        svgMain.call(mainChart);
+        svgRSI.call(rsiChart);
+        svgNav.call(navChart);
     }
 
     function resize() {
@@ -237,6 +256,9 @@
             targetWidth = useableScreenWidth;
         }
 
+        var xTicks = Math.floor(targetWidth / 80);
+        navTimeSeries.xTicks(xTicks);
+
         svgMain.attr('width', targetWidth)
             .attr('height', mainAspect * targetWidth);
         svgRSI.attr('width', targetWidth)
@@ -248,7 +270,27 @@
     }
 
     d3.select(window).on('resize', resize);
-
+    
+    //render([{date: new Date(1000)}]);
     resize();
+    
+    var feed = fc.data.feed.coinbase()
+        .start(new Date(2015, 2, 1))
+        .end(new Date(2015, 7, 22))
+        .granularity(100000); // what is this?  
+
+    //timeSeries.plotArea(multi); // initials. Add 'loading' text?
+        
+    
+    feed(function(err, data){
+        if(!err){
+            console.log("Initial data loaded");
+            // To order from oldest to newest
+            data = data.reverse(); 
+            // Initialize starting domain
+            timeSeries.xDomain([data[Math.floor(data.length / 2)].date, data[Math.floor(data.length * 3 / 4)].date]); 
+            render(data);
+        } else { alert("Error getting data from coinbase"); }
+    });
 
 })(d3, fc);
