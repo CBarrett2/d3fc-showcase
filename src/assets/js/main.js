@@ -11,6 +11,18 @@
         return visibleData;
     }
 
+    function getExtent(data) {
+        /* Applies the fc.util.extent function to find the extent of dates,
+        but adds a buffer of one day to either side */
+        var buffer = 1000 * 60 * 60 * 24;
+
+        var xExtent = fc.util.extent(data, ['date']);
+        xExtent[0] = new Date(xExtent[0].getTime() - buffer);
+        xExtent[1] = new Date(xExtent[1].getTime() + buffer);
+
+        return xExtent;
+    }
+
     var width = 500;
     var height = 300;
     var mainAspect = height / width;
@@ -52,7 +64,7 @@
             var tx = zoom.translate()[0];
             var ty = zoom.translate()[1];
 
-            var xExtent = fc.util.extent(data, ['date']);
+            var xExtent = getExtent(data);
             var min = scale(xExtent[0]);
             var max = scale(xExtent[1]);
 
@@ -124,8 +136,9 @@
 
     // Create navigation chart
     var yExtent = fc.util.extent(getVisibleData(data, fc.util.extent(data, 'date')), ['low', 'high']);
+    var xExtent = getExtent(data);
     var navTimeSeries = fc.chart.linearTimeSeries()
-        .xDomain(fc.util.extent(data, 'date'))
+        .xDomain(xExtent)
         .yDomain(yExtent)
         .yTicks(5);
 
