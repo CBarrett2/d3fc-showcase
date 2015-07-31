@@ -1,4 +1,4 @@
-(function(d3, fc) {
+(function(d3, fc, sc) {
     'use strict';
     function getVisibleData(data, dateExtent) {
         // Calculate visible data, given [startDate, endDate]
@@ -11,30 +11,92 @@
         return visibleData;
     }
 
-    var width = 500;
-    var height = 300;
-    var mainAspect = height / width;
-    var rsiHeight = height / 2;
-    var rsiAspect = rsiHeight / width;
-    var navHeight = height / 3;
-    var navAspect = navHeight / width;
+    function padExtent(extent) { // Change name
+        /* Applies the fc.util.extent function to find the extent of dates,
+        but adds a buffer of one day to either side */
+        var period = dataInterface.period();
 
-    // Set SVGs
+        extent[0] = d3.time.second.offset(new Date(extent[0]), -period);
+        extent[1] = d3.time.second.offset(new Date(extent[1]), +period);
+
+        return extent;
+    }
+
+    // Set SVGs & column padding
     var container = d3.select('#chart-example');
+
+    var leftPadding = parseInt(container.select('.col-md-12').style('padding-left'), 10);
+    var rightPadding = parseInt(container.select('.col-md-12').style('padding-right'), 10);
+
     var svgMain = container.select('svg.main');
     var svgRSI = container.select('svg.rsi');
     var svgNav = container.select('svg.nav');
 
-    var data = fc.data.random.financial()(250);
+    var mainAspect = 0.6;
+    var rsiAspect = 0.3;
+    var navAspect = 0.2;
+    var heightWidthAspect = mainAspect + rsiAspect + navAspect;
 
-    // Create main chart and set how much data is initially viewed
+    // Period is defined in seconds
+    var dataInterface = sc.data.dataInterface()
+        .liveFeed(sc.data.feed.coinbase.websocket())
+        .historicFeed(fc.data.feed.coinbase())
+        .period(60 * 60 * 12)
+        .product('BTC-USD');
+
+    d3.select('#period-selection')
+        .on('change', function() {
+            var period = parseInt(d3.select(this).property('value'));
+            dataInterface.period(period);
+            function cb(data) {
+                resetToLive();
+                updateData(data);
+                render();
+            }
+            var currData = dataInterface.getCurrentData();
+            if (currData != null) {
+                cb(currData);
+            } else { dataInterface.getHistoricData(cb); }
+        });
+
+    d3.select('#product-selection')
+        .on('change', function() {
+            var product = d3.select(this).property('value');
+            dataInterface.product(product);
+            dataInterface.getHistoricData(function(data) {
+                resetToLive();
+                updateData(data);
+                render();
+            });
+        });
+
+    // Set Reset button event
+    function resetToLive() {
+        var goldenRatio = 1.618;
+        var currData = dataInterface.getCurrentData();
+        var standardDateDisplay = [currData[Math.floor((1 - navAspect * goldenRatio) * currData.length)].date,
+            currData[currData.length - 1].date];
+        standardDateDisplay = padExtent(standardDateDisplay);
+        timeSeries.xDomain(standardDateDisplay);
+    }
+
+    container.select('#reset-button').on('click', function() {
+        resetToLive();
+        render();
+    });
+
+    // Create main chart
     var timeSeries = fc.chart.linearTimeSeries()
-        .xDomain([data[Math.floor(data.length / 2)].date, data[Math.floor(data.length * 3 / 4)].date])
         .xTicks(6);
 
     var gridlines = fc.annotation.gridline()
         .yTicks(5)
         .xTicks(0);
+
+    var endPriceLine = fc.annotation.line()
+        .orient('horizontal')
+        .value(function(d) { return d.close; })
+        .label(function(d) { return 'CLOSE'; });
 
     var candlestick = fc.series.candlestick();
 
@@ -45,14 +107,16 @@
     var ma = fc.series.line()
         .yValue(function(d) { return d.movingAverage; });
 
-    var multi = fc.series.multi().series([gridlines, candlestick, ma]);
+    var multi = fc.series.multi()
+        .series([gridlines, candlestick, ma, endPriceLine]);
+
 
     function zoomCall(zoom, data, scale) {
         return function() {
             var tx = zoom.translate()[0];
             var ty = zoom.translate()[1];
 
-            var xExtent = fc.util.extent(data, ['date']);
+            var xExtent = padExtent(fc.util.extent(data, ['date']));
             var min = scale(xExtent[0]);
             var max = scale(xExtent[1]);
 
@@ -60,6 +124,10 @@
             var width = svgMain.attr('width');
             if (min > 0) {
                 tx -= min;
+                dataInterface.getHistoricData(function(data) {
+                    updateData(data);
+                    render();
+                });
             } else if (max - width < 0) {
                 tx -= (max - width);
             }
@@ -71,18 +139,17 @@
                     tx = scale(xExtent[0]);
                 }
             }
-
             zoom.translate([tx, ty]);
             render();
         };
     }
 
     var mainChart = function(selection) {
-        data = selection.datum();
-        movingAverage(data);
+        var data = selection.datum();
 
         // Scale y axis
         var yExtent = fc.util.extent(getVisibleData(data, timeSeries.xDomain()), ['low', 'high']);
+
         // Add 10% either side of extreme high/lows
         var variance = yExtent[1] - yExtent[0];
         yExtent[0] -= variance * 0.1;
@@ -103,65 +170,63 @@
 
     // Create RSI chart
     var rsiScale = d3.scale.linear()
-        .domain([0, 100])
-        .range([rsiHeight, 0]);
+        .domain([0, 100]);
+
     var rsiAlgorithm = fc.indicator.algorithm.relativeStrengthIndex();
 
     var rsi = fc.indicator.renderer.relativeStrengthIndex()
         .yScale(rsiScale);
 
+    var volumeScale = d3.scale.linear();
+
+    var volume = fc.series.bar()
+        .yValue(function(d) { return d.volume; });
+
     var rsiChart = function(selection) {
-        data = selection.datum();
+        var data = selection.datum();
         rsi.xScale(timeSeries.xScale());
-        rsiAlgorithm(data);
+
+        volume.xScale(timeSeries.xScale());
+
         // Important for initialization that this happens after timeSeries is called [or can call render() twice]
         var zoom = d3.behavior.zoom();
         zoom.x(timeSeries.xScale())
             .on('zoom', zoomCall(zoom, data, timeSeries.xScale()));
         selection.call(zoom);
         selection.call(rsi);
+        selection.call(volume);
     };
 
     // Create navigation chart
-    var yExtent = fc.util.extent(getVisibleData(data, fc.util.extent(data, 'date')), ['low', 'high']);
     var navTimeSeries = fc.chart.linearTimeSeries()
-        .xDomain(fc.util.extent(data, 'date'))
-        .yDomain(yExtent)
-        .yTicks(5);
+        .yTicks(4);
 
     var area = fc.series.area()
-        .yValue(function(d) { return d.open; })
-        .y0Value(yExtent[0]);
+        .yValue(function(d) { return d.open; });
 
     var line = fc.series.line()
         .yValue(function(d) { return d.open; });
 
     var brush = d3.svg.brush();
-    var navMulti = fc.series.multi().series([area, line, brush]);
+    var navMulti = fc.series.multi()
+        .series([area, line, brush]);
 
     var navChart = function(selection) {
-        data = selection.datum();
+        var data = selection.datum();
 
-        brush.on('brush', function() {
+        var yExtent = fc.util.extent(data, ['low', 'high']);
+        var xExtent = padExtent(fc.util.extent(data, ['date']));
+        navTimeSeries.xDomain(xExtent)
+            .yDomain(yExtent);
+
+        brush.x(navTimeSeries.xScale())// ??
+            .on('brush', function() {
                 if (brush.extent()[0][0] - brush.extent()[1][0] !== 0) {
                     // Control the main chart's time series domain
                     timeSeries.xDomain([brush.extent()[0][0], brush.extent()[1][0]]);
                     render();
                 }
             });
-
-        // Allow to zoom using mouse, but disable panning
-        var zoom = d3.behavior.zoom();
-        zoom.x(timeSeries.xScale())
-            .on('zoom', function() {
-                if (zoom.scale() === 1) {
-                    zoom.translate([0, 0]);
-                } else {
-                    // Usual behavior
-                    zoomCall(zoom, data, timeSeries.xScale())();
-                }
-            });
-        selection.call(zoom);
 
         navMulti.mapping(function(series) {
                 if (series === brush) {
@@ -173,32 +238,66 @@
                 return data;
             });
 
+        // Allow to zoom using mouse, but disable panning
+        var zoom = d3.behavior.zoom();
+        zoom.x(timeSeries.xScale())
+            .on('zoom', function() {
+                if (zoom.scale() === 1) { // might want to load data if zooming further out
+                    zoom.translate([0, 0]);
+                } else {
+                    // Usual behavior
+                    zoomCall(zoom, data, timeSeries.xScale())();
+                }
+            });
+        selection.call(zoom);
+
         navTimeSeries.plotArea(navMulti);
         selection.call(navTimeSeries);
     };
 
+    // Later this can hold all the functions that req updating with data (eg moving average)
+    function updateData(data) {
+        movingAverage(data);
+        rsiAlgorithm(data);
+
+        var volumeExtent = fc.util.extent(data, ['volume']);
+        volumeScale.domain([0, volumeExtent[1]]);
+        volume.yScale(volumeScale);
+
+        multi.mapping(function(series) {
+            if (series === endPriceLine) {
+                return [data[data.length - 1]];
+            } else { return data; }
+        });
+
+        svgMain.datum(data);
+        svgRSI.datum(data);
+        svgNav.datum(data);
+    }
+
     function render() {
-        svgMain.datum(data)
-            .call(mainChart);
 
-        svgRSI.datum(data)
-            .call(rsiChart);
-
-        svgNav.datum(data)
-            .call(navChart);
+        svgMain.call(mainChart);
+        svgRSI.call(rsiChart);
+        svgNav.call(navChart);
     }
 
     function resize() {
-        var marginX = 10; // value should be taken from css/html really
-        var screenWidth = window.innerWidth - (marginX * 2);
-        var maxWidth = width;
+        var resetRowHeight = parseInt(container.select('#reset-row').style('height'), 10);
+
+        var useableScreenWidth = window.innerWidth - (leftPadding + rightPadding);
+        var useableScreenHeight = window.innerHeight - resetRowHeight;
 
         var targetWidth;
-        if (screenWidth < maxWidth) {
-            targetWidth = screenWidth;
+        if (useableScreenHeight < heightWidthAspect * useableScreenWidth) {
+            targetWidth = useableScreenHeight / heightWidthAspect;
         } else {
-            targetWidth = maxWidth;
+            targetWidth = useableScreenWidth;
         }
+
+        var xTicks = Math.floor(targetWidth / 80);
+        navTimeSeries.xTicks(xTicks);
+
         svgMain.attr('width', targetWidth)
             .attr('height', mainAspect * targetWidth);
         svgRSI.attr('width', targetWidth)
@@ -206,12 +305,26 @@
         svgNav.attr('width', targetWidth)
             .attr('height', navAspect * targetWidth);
         rsi.yScale().range([rsiAspect * targetWidth, 0]);
+        volume.yScale().range([rsiAspect * targetWidth, rsiAspect * targetWidth / 2]);
         render();
     }
 
     d3.select(window).on('resize', resize);
 
-    resize();
-    render();
+    // Would be nice to have an initial chart axes/etc showing, without data + 'loading' text
 
-})(d3, fc);
+    // Initialize
+    dataInterface.getHistoricData(function(data) {
+        // Using golden ratio to make initial display area rectangle into the golden rectangle
+        resetToLive();
+        updateData(data);
+        render();
+        resize();
+        // Once initial historic data is loaded, start streaming live data
+        dataInterface.live(function(data) {
+            updateData(data);
+            render();
+        });
+    });
+
+})(d3, fc, sc);
