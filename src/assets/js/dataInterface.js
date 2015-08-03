@@ -93,8 +93,7 @@
         };
 
         dataInterface.liveFeed = function(feed) {
-            // Maybe some of liveFeeds values should be auto-configured to match those of historic feed here (eg product). 
-            // Also perhaps should be init-ed within historic feed's first call?
+            // Maybe some of liveFeeds values should be auto-configured to match those of historic feed here (eg product).        
             if (!arguments.length) { return liveFeed; }
             liveFeed = feed;
             return dataInterface;
