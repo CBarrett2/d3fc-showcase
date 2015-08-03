@@ -80,6 +80,12 @@ module.exports = function(grunt) {
                     expand: true
                 },
                 {
+                    cwd: 'node_modules/jquery/dist',
+                    src: ['jquery.min.js'],
+                    dest: 'dist/assets/js',
+                    expand: true
+                },
+                {
                     cwd: 'node_modules/d3fc/node_modules/d3/',
                     src: ['d3.js'],
                     dest: 'dist/assets/js',
@@ -204,12 +210,31 @@ module.exports = function(grunt) {
                     platforms: ['android']
                 }
             }
+        },
+
+        jasmine: {
+            options: {
+                specs: '<%= meta.testJsFiles %>',
+                vendor: ['node_modules/jquery/dist/jquery.min.js',
+                        'node_modules/d3fc/node_modules/d3/d3.js',
+                        'node_modules/d3fc/node_modules/css-layout/src/Layout.js',
+                        'node_modules/d3fc/dist/d3fc.js']
+            },
+            test: {
+                src: ['dist/assets/js/sc.js',
+                    'dist/assets/js/dataInterface.js'],
+                options: {
+                    keepRunner: true
+                }
+            }
         }
 
     });
 
     require('load-grunt-tasks')(grunt);
 
+    grunt.registerTask('test', ['jasmine:test']);
+    grunt.registerTask('serve', ['build', 'connect:dist']);
     grunt.registerTask('default', ['build']);
     grunt.registerTask('ci', [
             'build',

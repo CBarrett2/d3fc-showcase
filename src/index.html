@@ -15,7 +15,7 @@
     <script src="assets/js/Layout.js"></script>
     <script src="assets/js/d3fc.js"></script>
 
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="assets/js/jquery.min.js"></script>
     <script src="assets/js/bootstrap.min.js"></script>
   </head>
   <body>
@@ -23,6 +23,18 @@
       <div class="row" id="reset-row">
         <div class="col-md-12">
           <button type="button" id="reset-button">Reset</button>
+          Period
+          <select id="period-selection">
+            <option value="43200">12hr</option>
+            <option value="3600">1hr</option>
+            <option value="300">5min</option>
+          </select>
+          Product
+          <select id="product-selection">
+            <option value="BTC-USD">BTC/USD</option>
+            <option value="BTC-EUR">BTC/EUR</option>
+            <option value="BTC-GBP">BTC/GBP</option>
+          </select>
         </div>
       </div>
       <div class="row">
@@ -41,7 +53,12 @@
           </div>
         </div>
       </div>
+      
+      
     </div>
+    <script src="assets/js/sc.js"></script>
+    <script src="assets/js/websocket.js"></script>
+    <script src="assets/js/dataInterface.js"></script>
     <script src="assets/js/main.js"></script>
   </body>
 </html>
