@@ -28,7 +28,6 @@
             // Calls callback with all the data we have for the current period
             // Set default number of candles to 100
             numberCandles = numberCandles || 100;
-
             // Is it this class' responsibility to not make too many requests?? or is it the user's?
             if (fetching) {
                 return;
@@ -142,12 +141,8 @@
             } else {
                 // Update current basket
                 currentBaskets[period].close = datum.price;
-                if (currentBaskets[period].high < datum.price) {
-                    currentBaskets[period].high = datum.price;
-                }
-                if (currentBaskets[period].low > datum.price) {
-                    currentBaskets[period].low = datum.price;
-                }
+                currentBaskets[period].high = Math.max(currentBaskets[period].high, datum.price);
+                currentBaskets[period].low = Math.min(currentBaskets[period].min, datum.price);
                 currentBaskets[period].volume += datum.volume;
             }
         }

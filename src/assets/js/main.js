@@ -11,7 +11,7 @@
         return visibleData;
     }
 
-    function padExtent(extent) { // Change name
+    function padExtent(extent) {
         /* Applies the fc.util.extent function to find the extent of dates,
         but adds a buffer of one day to either side */
         var period = dataInterface.period();
