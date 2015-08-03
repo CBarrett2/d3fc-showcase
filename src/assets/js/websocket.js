@@ -4,23 +4,19 @@
     sc.data.feed.coinbase.websocket = function() {
         // can get product list from /products
         var product = 'BTC-USD';
-        var products = [];
-        d3.json('https://api.exchange.coinbase.com/products/', function(err, data) {
-            for (var i = 0; i < data.length; i++) {
-                // jscs:disable
-                products.push(data[i].display_name);
-                // jscs:enable
-            }
-        });
+        var productList = [];
+        var msgType = 'match';
+        var coinbaseSocket = null;
+        var callback = null;
 
         function websocket(cb) {
             var coinbaseSocket = new WebSocket('wss://ws-feed.exchange.coinbase.com');
             var msg = {
                 type: 'subscribe',
-                // jscs:disable
-                product_id: product
-                // jscs:enable
+                'product_id': product
             };
+
+            callback = cb;
 
             coinbaseSocket.onopen = function() {
                 // Send the msg object as a JSON-formatted string.
@@ -29,7 +25,7 @@
 
             coinbaseSocket.onmessage = function(event) {
                 var jMsg = JSON.parse(event.data);
-                if (jMsg.type === 'match') {
+                if (jMsg.type === msgType) {
                     var datum = {};
                     datum.date = new Date(jMsg.time);
                     datum.price = parseFloat(jMsg.price);
@@ -44,20 +40,38 @@
                 console.log('Error loading data from coinbase websocket: ' + err);
             };
 
-            websocket.close = function() {
-                coinbaseSocket.close();
-            };
-
         }
+
+        websocket.close = function() {
+            if (coinbaseSocket) {
+                coinbaseSocket.close();
+            }
+        };
+
+        websocket.msgType = function(msgType) {
+            if (!arguments.length) { return msgType; }
+            msgType = msgType;
+            return websocket;
+        };
 
         websocket.product = function(product) {
             if (!arguments.length) { return product; }
             product = product;
+            if (coinbaseSocket) {
+                coinbaseSocket.close();
+                coinbaseSocket(callback);
+            }
             return websocket;
         };
 
-        websocket.getProductList = function() {
-            return products;
+        websocket.getProductList = function(cb) {
+            if (productList) { cb(productList); }
+            d3.json('https://api.exchange.coinbase.com/products/', function(err, data) {
+                // jscs:disable
+                productList = data.map(function(currValue) { return currValue.display_name; });
+                // jscs:enable
+                cb(productList);
+            });
         };
 
         return websocket;

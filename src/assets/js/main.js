@@ -62,6 +62,7 @@
     d3.select('#product-selection')
         .on('change', function() {
             var product = d3.select(this).property('value');
+            // Would be nice to base this selection off the products list
             dataInterface.product(product);
             dataInterface.getHistoricData(function(data) {
                 resetToLive();

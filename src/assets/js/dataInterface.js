@@ -74,6 +74,10 @@
         dataInterface.live = function(callback) {
             // This initialized the live feed
             liveFeed(function(datum) {
+                    if (currentBaskets[currentPeriod] == null) {
+                        // Don't start live feed until first historic data fetch done
+                        return;
+                    }
                     updateAllBaskets(datum);
                     var currentData = dataInterface.getCurrentData();
                     callback(currentData);
@@ -89,6 +93,8 @@
         };
 
         dataInterface.liveFeed = function(feed) {
+            // Maybe some of liveFeeds values should be auto-configured to match those of historic feed here (eg product). 
+            // Also perhaps should be init-ed within historic feed's first call?
             if (!arguments.length) { return liveFeed; }
             liveFeed = feed;
             return dataInterface;
@@ -142,7 +148,7 @@
                 // Update current basket
                 currentBaskets[period].close = datum.price;
                 currentBaskets[period].high = Math.max(currentBaskets[period].high, datum.price);
-                currentBaskets[period].low = Math.min(currentBaskets[period].min, datum.price);
+                currentBaskets[period].low = Math.min(currentBaskets[period].low, datum.price);
                 currentBaskets[period].volume += datum.volume;
             }
         }
