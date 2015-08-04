@@ -47,9 +47,10 @@
         };
 
         basketCollector.getBasket = function(period) { // maybe could have getter/setter rather than this + init
-            return currentBaskets[period]; 
+            return currentBaskets[period];
         };
-        
+
+        // would be nice to get collectedData[period] = [] defined whenever currentBaskets defined
         basketCollector.getData = function(period) {
             if (collectedData[period]) {
                 return collectedData[period].concat(currentBaskets[period]);
@@ -100,17 +101,15 @@
             if (data[currentPeriod] == null) {
                 return null;
             }
-            
             var latestData = basketCollector.getData(currentPeriod);
-            var currentData = data[currentPeriod].concat(latestData); // assumes latestData returns [] if empty
+            var currentData = data[currentPeriod].concat(latestData);
             return currentData;
         };
 
         dataInterface.getHistoricData = function(callback, numberCandles) {
             // This function gets another 'numberCandles' more historic data
-            // Calls callback with all the data we have for the current period
-            // Set default number of candles to 100
             numberCandles = numberCandles || 100;
+
             // Is it this class' responsibility to not make too many requests?? or is it the user's?
             if (fetching) {
                 return;
@@ -147,15 +146,16 @@
                     // Store the new data we got
                     data[currentPeriod] = newData.concat(data[currentPeriod]);
 
+                    // move to when period changed?
                     var latestBasket = basketCollector.getBasket(currentPeriod);
                     if (latestBasket == null) {
-                        latestBasket = data[currentPeriod][data[currentPeriod].length - 1]
+                        latestBasket = data[currentPeriod][data[currentPeriod].length - 1];
                         basketCollector.init(latestBasket, currentPeriod);
                         data[currentPeriod] = data[currentPeriod].slice(0, data[currentPeriod].length - 1);
-                    } 
-                    
+                    }
+
                     var currentData = dataInterface.getCurrentData();
-                    
+
                     // Return all data! can be sorted through by client
                     callback(currentData);
                 } else { console.log('Error getting data from historic feed: ' + err); }
