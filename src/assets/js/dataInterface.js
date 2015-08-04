@@ -102,7 +102,10 @@
                 return null;
             }
             var latestData = basketCollector.getData(currentPeriod);
-            var currentData = data[currentPeriod].concat(latestData);
+            var currentData = data[currentPeriod]
+            if (latestData) {
+                currentData = currentData.concat(latestData);
+            }
             return currentData;
         };
 
