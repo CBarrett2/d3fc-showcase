@@ -322,9 +322,15 @@
         render();
         resize();
         // Once initial historic data is loaded, start streaming live data
-        dataInterface.live(function(data) {
-            updateData(data);
-            render();
+        dataInterface.live(function() {
+            data = dataInterface.getCurrentData();
+            //console.log("Maybe this doesnt always exist!");
+            //
+            if (data.length) {
+                //console.log(data)
+                updateData(data);
+                render();
+            }
         });
     });
 

@@ -5,7 +5,7 @@
         // can get product list from /products
         var product = 'BTC-USD';
         var productList = [];
-        var msgType = 'match';
+        var msgType = 'received';
         var coinbaseSocket = null;
         var callback = null;
 
