@@ -30,7 +30,7 @@
                     datum.date = new Date(jMsg.time);
                     datum.price = parseFloat(jMsg.price);
                     datum.volume = parseFloat(jMsg.size);
-                    //console.log(datum);
+                    console.log(datum);
                     cb(datum);
                 }
 
