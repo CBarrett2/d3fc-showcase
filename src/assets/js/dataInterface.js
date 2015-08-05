@@ -6,22 +6,19 @@
         var collectedData = {};
         var liveFeed = {};
         var basketCollector = {};
+        var periods = [];
 
-        basketCollector.init = function(latestBasket, period) {
-            if (currentBaskets[period] == null) {
-                // Use the last historic data point
-                collectedData[period] = [];
-                currentBaskets[period] = latestBasket;
+        basketCollector.watchPeriod = function(period) {
+            if (periods.indexOf(period) === -1) {
+                periods.push(period);
             }
             return basketCollector;
         };
 
         basketCollector.live = function(callback) {
             liveFeed(function(datum) {
-                for (var period in currentBaskets) {
-                    if (currentBaskets.hasOwnProperty(period)) {
-                        updateBasket(datum, period);
-                    }
+                for (var i = 0; i < periods.length; i++) {
+                    updateBasket(datum, periods[i]);
                 }
                 callback(datum);
             });
@@ -36,32 +33,39 @@
         };
 
         basketCollector.product = function(product) {
-            if (!arguments.length) { return liveFeed.product(); } // perhaps pass to websocket product
+            // perhaps pass to websocket product
+            if (!arguments.length) { return liveFeed.product(); }
             if (liveFeed != null) {
                 liveFeed.product(product);
             }
             currentBaskets = {};
             collectedData = {};
+            periods = [];
             product = product;
             return basketCollector;
         };
 
-        basketCollector.getBasket = function(period) { // maybe could have getter/setter rather than this + init
+        basketCollector.getBasket = function(period) { // necessary?
             return currentBaskets[period];
         };
 
-        // would be nice to get collectedData[period] = [] defined whenever currentBaskets defined
         basketCollector.getData = function(period) {
-            if (collectedData[period]) {
-                return collectedData[period].concat(currentBaskets[period]);
-            } else { return currentBaskets[period]; }
+            if (currentBaskets[period] == null) {
+                return [];
+            } else { return collectedData[period].concat(currentBaskets[period]); }
         };
 
         function updateBasket(datum, period) {
+            if (currentBaskets[period] == null) {
+                createNewBasket(datum, period);
+                collectedData[period] = [];
+            }
+
             var latestTime = datum.date.getTime();
             var startTime = currentBaskets[period].date.getTime();
             var msPeriod = period * 1000;
             if (latestTime > startTime + msPeriod) {
+                // have basketCollector set dates properly based on rounding?
                 collectedData[period] = collectedData[period].concat(currentBaskets[period]);
                 createNewBasket(datum, period);
             } else {
@@ -89,7 +93,8 @@
     };
 
     sc.data.dataInterface = function() {
-        var currentPeriod = 60 * 60 * 24; // In seconds
+        // In seconds - maybe take this out and have chart pass in a period whenever needed
+        var currentPeriod = 60 * 60 * 24;
         var historicFeed = null;
         var fetching = false;
         var basketCollector = sc.data.basketCollector();
@@ -98,27 +103,55 @@
         var dataInterface = {};
 
         dataInterface.getCurrentData = function() {
-            if (data[currentPeriod] == null) {
-                return null;
-            }
             var latestData = basketCollector.getData(currentPeriod);
-            var currentData = data[currentPeriod].concat(latestData);
+            /* any live data before the end of historic data should be discarded
+            (? are we rounding? note when historic call was made?-> use this as the cutoff pt for live data?)
+
+            what about doubled live data points in that block though?
+            Have to assume both live+historic initialized @ same time - code in? */
+
+            if (data[currentPeriod].length) {
+                var lastHistoricDate = data[currentPeriod][data[currentPeriod].length - 1].date;
+                var bisector = d3.bisector(function(d) { return d.date; });
+                latestData = latestData.splice(bisector.left(latestData, lastHistoricDate), latestData.length);
+            }
+
+            var histData = data[currentPeriod];
+            var combinedBasket = [];
+
+            if (histData.length && latestData.length) {
+                histData = histData.slice(0, data[currentPeriod].length - 1);
+                combinedBasket = combineData(data[currentPeriod][data[currentPeriod].length - 1], latestData[0]);
+                latestData = latestData.splice(1, latestData.length); // remove first data point
+            }
+            var currentData = histData.concat(combinedBasket).concat(latestData);
             return currentData;
         };
 
+        function combineData(histBasket, liveBasket) {
+
+            var basket = {
+                date: histBasket.date,
+                open: histBasket.open,
+                volume: histBasket.volume
+            };
+
+            basket.close = liveBasket.close;
+            basket.high = Math.max(histBasket.high, liveBasket.high);
+            basket.low = Math.min(histBasket.low, liveBasket.low);
+            basket.volume += liveBasket.volume;
+
+            return basket;
+        }
+
+        // Also write similar function to get data between start/end date - maybe take out the fetch function
         dataInterface.getHistoricData = function(callback, numberCandles) {
             // This function gets another 'numberCandles' more historic data
             numberCandles = numberCandles || 100;
 
-            // Is it this class' responsibility to not make too many requests?? or is it the user's?
-            if (fetching) {
-                return;
-            } else { fetching = true; }
-
             var startDate = null;
             var endDate = null;
-            if (data[currentPeriod] == null) {
-                data[currentPeriod] = [];
+            if (data[currentPeriod].length === 0) {
                 var currTime = (new Date()).getTime();
                 // Convert period to ms + get numberCandles of data
                 startDate = new Date(currTime - (currentPeriod * 1000 * numberCandles));
@@ -134,6 +167,11 @@
                 return;
             }
 
+            // Is it this class' responsibility to not make too many requests?? or is it the user's?
+            if (fetching) {
+                return;
+            } else { fetching = true; }
+
             historicFeed.start(startDate)
                 .end(endDate)
                 .granularity(currentPeriod);
@@ -146,14 +184,6 @@
                     // Store the new data we got
                     data[currentPeriod] = newData.concat(data[currentPeriod]);
 
-                    // move to when period changed?
-                    var latestBasket = basketCollector.getBasket(currentPeriod);
-                    if (latestBasket == null) {
-                        latestBasket = data[currentPeriod][data[currentPeriod].length - 1];
-                        basketCollector.init(latestBasket, currentPeriod);
-                        data[currentPeriod] = data[currentPeriod].slice(0, data[currentPeriod].length - 1);
-                    }
-
                     var currentData = dataInterface.getCurrentData();
 
                     // Return all data! can be sorted through by client
@@ -162,6 +192,7 @@
             });
         };
 
+        // could maybe combine live and liveFeed into one function?
         dataInterface.live = function(callback) {
             // This initialized the live feed
             basketCollector.live(callback);
@@ -172,6 +203,10 @@
         dataInterface.period = function(period) {
             if (!arguments.length) { return currentPeriod; }
             currentPeriod = period;
+            basketCollector.watchPeriod(currentPeriod);
+            if (data[currentPeriod] == null) {
+                data[currentPeriod] = [];
+            }
             return dataInterface;
         };
 
@@ -193,6 +228,8 @@
             basketCollector.product(product);
             // Clear data cache
             data = {};
+            dataInterface.period(currentPeriod); // set to watch current period
+            basketCollector.watchPeriod(currentPeriod);
             return dataInterface;
         };
 

@@ -5,7 +5,7 @@
         // can get product list from /products
         var product = 'BTC-USD';
         var productList = [];
-        var msgType = 'received';
+        var msgType = 'match';
         var coinbaseSocket = null;
         var callback = null;
 
@@ -30,7 +30,7 @@
                     datum.date = new Date(jMsg.time);
                     datum.price = parseFloat(jMsg.price);
                     datum.volume = parseFloat(jMsg.size);
-                    console.log(datum);
+                    //console.log(datum);
                     cb(datum);
                 }
 
@@ -59,7 +59,7 @@
             product = product;
             if (coinbaseSocket) {
                 coinbaseSocket.close();
-                coinbaseSocket(callback);
+                websocket(callback);
             }
             return websocket;
         };

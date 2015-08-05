@@ -54,7 +54,7 @@
                 render();
             }
             var currData = dataInterface.getCurrentData();
-            if (currData != null) {
+            if (currData.length) {
                 cb(currData);
             } else { dataInterface.getHistoricData(cb); }
         });
@@ -75,10 +75,12 @@
     function resetToLive() {
         var goldenRatio = 1.618;
         var currData = dataInterface.getCurrentData();
-        var standardDateDisplay = [currData[Math.floor((1 - navAspect * goldenRatio) * currData.length)].date,
-            currData[currData.length - 1].date];
-        standardDateDisplay = padExtent(standardDateDisplay);
-        timeSeries.xDomain(standardDateDisplay);
+        if (currData.length) { // probably necessary?
+            var standardDateDisplay = [currData[Math.floor((1 - navAspect * goldenRatio) * currData.length)].date,
+                currData[currData.length - 1].date];
+            standardDateDisplay = padExtent(standardDateDisplay);
+            timeSeries.xDomain(standardDateDisplay);
+        }
     }
 
     container.select('#reset-button').on('click', function() {
@@ -322,6 +324,7 @@
         render();
         resize();
         // Once initial historic data is loaded, start streaming live data
+        // see if this works when activated outside of getData cb
         dataInterface.live(function() {
             data = dataInterface.getCurrentData();
             //console.log("Maybe this doesnt always exist!");
