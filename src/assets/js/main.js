@@ -44,19 +44,25 @@
         .period(60 * 60 * 12)
         .product('BTC-USD');
 
+    var currData = [];
+        
     d3.select('#period-selection')
         .on('change', function() {
             var period = parseInt(d3.select(this).property('value'));
             dataInterface.period(period);
-            function cb(data) {
-                resetToLive();
+            function cb(data) { // pull out as more general 'update/render' function, as is used multiple times
                 updateData(data);
+                resetToLive();
                 render();
             }
-            var currData = dataInterface.getCurrentData();
-            if (currData.length) {
-                cb(currData);
-            } else { dataInterface.getHistoricData(cb); }
+            //if (currData.length) {
+            //    cb(currData);
+            //} else { 
+            var dates = candlesDate(199, dataInterface.period())
+            dataInterface.getData(dates[0], dates[1], function(data) { 
+                cb(data);
+            });
+            //}
         });
 
     d3.select('#product-selection')
@@ -64,9 +70,11 @@
             var product = d3.select(this).property('value');
             // Would be nice to base this selection off the products list
             dataInterface.product(product);
-            dataInterface.getHistoricData(function(data) {
-                resetToLive();
+            
+            var dates = candlesDate(199, dataInterface.period())
+            dataInterface.getData(dates[0], dates[1], function(data) {
                 updateData(data);
+                resetToLive();
                 render();
             });
         });
@@ -74,7 +82,6 @@
     // Set Reset button event
     function resetToLive() {
         var goldenRatio = 1.618;
-        var currData = dataInterface.getCurrentData();
         if (currData.length) { // probably necessary?
             var standardDateDisplay = [currData[Math.floor((1 - navAspect * goldenRatio) * currData.length)].date,
                 currData[currData.length - 1].date];
@@ -127,10 +134,6 @@
             var width = svgMain.attr('width');
             if (min > 0) {
                 tx -= min;
-                dataInterface.getHistoricData(function(data) {
-                    updateData(data);
-                    render();
-                });
             } else if (max - width < 0) {
                 tx -= (max - width);
             }
@@ -260,6 +263,8 @@
 
     // Later this can hold all the functions that req updating with data (eg moving average)
     function updateData(data) {
+        currData = data;
+        
         movingAverage(data);
         rsiAlgorithm(data);
 
@@ -279,7 +284,6 @@
     }
 
     function render() {
-
         svgMain.call(mainChart);
         svgRSI.call(rsiChart);
         svgNav.call(navChart);
@@ -317,24 +321,60 @@
     // Would be nice to have an initial chart axes/etc showing, without data + 'loading' text
 
     // Initialize
-    dataInterface.getHistoricData(function(data) {
+    
+    
+    var dates = candlesDate(199, dataInterface.period())
+    dataInterface.getData(dates[0], dates[1], function(data) {
         // Using golden ratio to make initial display area rectangle into the golden rectangle
-        resetToLive();
         updateData(data);
+        resetToLive();
         render();
         resize();
         // Once initial historic data is loaded, start streaming live data
         // see if this works when activated outside of getData cb
         dataInterface.live(function() {
-            data = dataInterface.getCurrentData();
+            // here is where we should be combining data
             //console.log("Maybe this doesnt always exist!");
             //
-            if (data.length) {
+            var latestBasket = dataInterface.basket();
+            if (latestBasket == null) {
+                return;
+            }
+            
+            if (currData.length) { // could alternatively load all data again when new basket finished/not overlapping?
                 //console.log(data)
-                updateData(data);
+                var lastDatum = currData[currData.length - 1];
+                if (lastDatum.date.getTime() + dataInterface.period() * 1000 >= latestBasket.date.getTime()) {
+                    currData[currData.length - 1] = combineData(lastDatum, latestBasket);
+                } else { currData.push(latestBasket); }
+                updateData(currData);
                 render();
             }
         });
     });
+    
+    
+    function combineData(histBasket, liveBasket) {
+        // check they have overlapping dates?
+        var basket = {
+            date: histBasket.date,
+            open: histBasket.open,
+            volume: histBasket.volume
+        };
+
+        basket.close = liveBasket.close;
+        basket.high = Math.max(histBasket.high, liveBasket.high);
+        basket.low = Math.min(histBasket.low, liveBasket.low);
+        basket.volume += liveBasket.volume;
+
+        return basket;
+    }
+    
+    function candlesDate(n, period) {
+        var end = new Date();
+        // n candles into the past
+        var start = new Date(end.getTime() - (n * 1000 * dataInterface.period())); 
+        return [start, end];
+    }
 
 })(d3, fc, sc);
