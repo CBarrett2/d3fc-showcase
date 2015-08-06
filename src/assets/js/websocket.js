@@ -4,7 +4,6 @@
         var product = 'BTC-USD';
         var msgType = 'match';
         var coinbaseSocket = null;
-        var callback = null; // not sure we want to be storing things like this?
 
         function websocket(cb) {
             coinbaseSocket = new WebSocket('wss://ws-feed.exchange.coinbase.com');
@@ -12,8 +11,6 @@
                 type: 'subscribe',
                 'product_id': product
             };
-
-            callback = cb;
 
             coinbaseSocket.onopen = function() {
                 coinbaseSocket.send(JSON.stringify(msg));
