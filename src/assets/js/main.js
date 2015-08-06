@@ -307,8 +307,8 @@
         // If loading
         if (!currData.length) {
             svgMain.selectAll('*').remove();
-            svgMain.append('text')
-                .text('loading...');
+            //svgMain.append('text')
+            //    .text('loading...');
             svgRSI.selectAll('*').remove();
             svgNav.selectAll('*').remove();
 
