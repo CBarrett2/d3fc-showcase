@@ -38,10 +38,8 @@
         }
 
         websocket.close = function() {
-            if (coinbaseSocket) {
-                if (coinbaseSocket.readyState === 1) {
-                    coinbaseSocket.close();
-                }
+            if (coinbaseSocket && coinbaseSocket.readyState === 1) {
+                coinbaseSocket.close();
             }
             return websocket;
         };
