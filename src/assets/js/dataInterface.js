@@ -5,7 +5,7 @@
         // In seconds - maybe take this out and have chart pass in a period whenever needed
         var period = 60 * 60 * 24; // might not have to be held
         var historicFeed = null;
-        var liveFeed = null; 
+        var OHLC = sc.data.OHLC(); 
         var live = false; // used to see if should append/combine last basket with live data
         var fetching = false;
         var dataInterface = {};
@@ -24,18 +24,7 @@
             historicFeed(function(err, newData) {
                 // pass errors back to chart in callback
                 fetching = false;
-                if (!err) {
-                    /*var latestBasket = [];
-                    if (liveFeed && live) {
-                        // check if basket exists?
-                        // is this live data shizzle needed in here if its also outside?
-                        latestBasket = liveFeed.basket();
-                        // Combine the two baskets if needed
-                        if (newData[0].date.getTime() + period * 1000 >= latestBasket.getTime()) {
-                            newData[0] = combineData(newData[0], latestBasket);
-                        } else { newData.unshift(latestBasket); }
-                    }*/
-                               
+                if (!err) { 
                     // To order from oldest to newest - maybe not needed?
                     newData = newData.reverse();
                     
@@ -51,7 +40,7 @@
                 return dataInterface;
             }
             live = true;
-            liveFeed(callback);
+            OHLC(callback);
             return dataInterface;
         };
 
@@ -60,21 +49,23 @@
             if (!arguments.length) { return period; }
             
             period = x;
-            if (liveFeed) {
-                liveFeed.period(x);
+            if (OHLC) {
+                OHLC.period(x);
             }
             return dataInterface;
         };
 
-        dataInterface.liveFeed = function(feed) { 
-            if (!arguments.length) { return liveFeed; }
+        d3.rebind(dataInterface, OHLC, 'liveFeed', 'basket')
+        
+        /*dataInterface.liveFeed = function(feed) { 
+            if (!arguments.length) { return OHLC.liveFeed(); }
             liveFeed = feed;
             liveFeed.period(period); 
             // pass the same callback for both feeds? -> save?
             
             d3.rebind(dataInterface, liveFeed, 'basket'); // dont think thisll work?
             return dataInterface;
-       };
+       };*/
 
         dataInterface.historicFeed = function(feed) {
             if (!arguments.length) { return historicFeed; }
@@ -85,7 +76,7 @@
         dataInterface.product = function(x) {
             if (!arguments.length) { return historicFeed.product(); } // or live feeds, whatever exists?? assign product whenever feed is inited
             historicFeed.product(x);
-            liveFeed.product(x);
+            OHLC.product(x);
             return dataInterface;
         };
         

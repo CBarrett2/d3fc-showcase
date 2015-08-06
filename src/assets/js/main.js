@@ -344,7 +344,7 @@
             if (currData.length) { // could alternatively load all data again when new basket finished/not overlapping?
                 //console.log(data)
                 var lastDatum = currData[currData.length - 1];
-                if (lastDatum.date.getTime() + dataInterface.period() * 1000 >= latestBasket.date.getTime()) {
+                if (lastDatum.date.getTime() + (dataInterface.period() * 1000) >= latestBasket.date.getTime()) {
                     currData[currData.length - 1] = combineData(lastDatum, latestBasket);
                 } else { currData.push(latestBasket); }
                 updateData(currData);
