@@ -9,7 +9,7 @@
         var callback = function(event, datum) { return; };
 
         function ohlc(cb) {
-            if (arguments.length) {
+            if (cb) {
                 callback = cb;
             }
             liveFeed(function(err, datum) {
@@ -34,9 +34,11 @@
                 return liveFeed.product();
             }
             liveFeed.product(x);
+            // Restart liveFeed
             liveFeed.close();
             ohlc();
             currentBasket = null;
+            return ohlc;
         };
 
         ohlc.period = function(x) {
@@ -63,10 +65,15 @@
                 createNewBasket(datum);
             } else {
                 // Update current basket
-                currentBasket.close = datum.price;
                 currentBasket.high = Math.max(currentBasket.high, datum.price);
                 currentBasket.low = Math.min(currentBasket.low, datum.price);
                 currentBasket.volume += datum.volume;
+                // Messages can arrive out of order, so in this case we might want to update the open
+                if (latestTime < currentBasket.date.getTime()) {
+                    currentBasket.open = datum.price;
+                } else {
+                    currentBasket.close = datum.price;
+                }
             }
         }
 

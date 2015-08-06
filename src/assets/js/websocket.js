@@ -43,6 +43,7 @@
                     coinbaseSocket.close();
                 }
             }
+            return websocket;
         };
 
         websocket.msgType = function(x) {
@@ -64,10 +65,11 @@
         websocket.getProductList = function(cb) {
             d3.json('https://api.exchange.coinbase.com/products/', function(err, data) {
                 // jscs:disable
-                var productList = data.map(function(currValue) { return currValue.display_name; });
+                var productList = data.map(function(product) { return product.display_name; });
                 // jscs:enable
-                cb(productList);
+                cb(err, productList);
             });
+            return websocket;
         };
 
         return websocket;
