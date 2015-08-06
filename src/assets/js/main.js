@@ -368,7 +368,8 @@
                     render();
                 }
             } else if (event.code === 1000) {
-                console.log('Websocket closing');
+                // I don't think there's any need for a message
+                // console.log('Websocket closing');
             } else { console.log('Error loading data from coinbase websocket: ' + event); }
         });
     });
