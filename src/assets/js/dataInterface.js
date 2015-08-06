@@ -6,7 +6,7 @@
         // We could potentially hold period in chart, rather than dataInterface
         var period = 60 * 60 * 24;
         var historicFeed = null;
-        var OHLC = sc.data.OHLC();
+        var ohlc = sc.data.ohlc();
         var fetching = false;
         var dataInterface = {};
 
@@ -29,18 +29,18 @@
         };
 
         dataInterface.live = function(callback) {
-            OHLC(callback);
+            ohlc(callback);
             return dataInterface;
         };
 
         dataInterface.period = function(x) {
             if (!arguments.length) { return period; }
             period = x;
-            OHLC.period(x);
+            ohlc.period(x);
             return dataInterface;
         };
 
-        d3.rebind(dataInterface, OHLC, 'liveFeed', 'basket');
+        d3.rebind(dataInterface, ohlc, 'liveFeed', 'basket');
 
         dataInterface.historicFeed = function(x) {
             if (!arguments.length) { return historicFeed; }
@@ -51,7 +51,7 @@
         dataInterface.product = function(x) {
             if (!arguments.length) { return historicFeed.product(); }
             historicFeed.product(x);
-            OHLC.product(x);
+            ohlc.product(x);
             return dataInterface;
         };
 
