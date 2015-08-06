@@ -6,8 +6,12 @@
         // In seconds
         var period = 60 * 60 * 24;
         var liveFeed = sc.data.feed.coinbase.websocket();
+        var callback = function(event, datum) { return; };
 
-        function ohlc(callback) {
+        function ohlc(cb) {
+            if (arguments.length) {
+                callback = cb;
+            }
             liveFeed(function(err, datum) {
                 if (datum) {
                     updateBasket(datum);
@@ -22,9 +26,30 @@
             }
             liveFeed = x;
             currentBasket = null;
-            // This requires liveFeed to be set up first, before changing prodcut/etc on liveFeed
-            d3.rebind(ohlc, liveFeed, 'product', 'msgType', 'close');
             return ohlc;
+        };
+
+        ohlc.product = function(x) {
+            if (!arguments.length) {
+                return liveFeed.product();
+            }
+            liveFeed.product(x);
+            liveFeed.close();
+            ohlc();
+            currentBasket = null;
+        };
+
+        ohlc.period = function(x) {
+            if (!arguments.length) {
+                return period;
+            }
+            period = x;
+            currentBasket = null;
+            return ohlc;
+        };
+
+        ohlc.basket = function() {
+            return currentBasket;
         };
 
         function updateBasket(datum) {
@@ -44,19 +69,6 @@
                 currentBasket.volume += datum.volume;
             }
         }
-
-        ohlc.period = function(x) {
-            if (!arguments.length) {
-                return period;
-            }
-            period = x;
-            currentBasket = null;
-            return ohlc;
-        };
-
-        ohlc.basket = function() {
-            return currentBasket;
-        };
 
         function createNewBasket(datum) {
             currentBasket = {

@@ -61,10 +61,6 @@
                 return product;
             }
             product = x;
-            if (coinbaseSocket) {
-                coinbaseSocket.close();
-                websocket(callback);
-            }
             return websocket;
         };
 
