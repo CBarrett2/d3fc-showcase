@@ -26,6 +26,7 @@
                     datum.date = new Date(messageData.time);
                     datum.price = parseFloat(messageData.price);
                     datum.volume = parseFloat(messageData.size);
+                    console.log(datum);
                     cb(null, datum);
                 }
             };
@@ -81,9 +82,9 @@
         var liveFeed = null;
 
         function OHLC(callback) {
-            liveFeed(function(datum) {
+            liveFeed(function(err, datum) {
                 updateBasket(datum);
-                callback(datum);
+                callback(err, datum);
             });
         }
 
