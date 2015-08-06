@@ -9,7 +9,9 @@
 
         function ohlc(callback) {
             liveFeed(function(err, datum) {
-                updateBasket(datum);
+                if (datum) {
+                    updateBasket(datum);
+                }
                 callback(err, datum);
             });
         }

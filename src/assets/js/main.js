@@ -356,8 +356,8 @@
         renderCallback(err, data);
         resize();
         // Once initial historic data is loaded, start streaming live data
-        dataInterface.live(function(err, datum) {
-            if (!err) {
+        dataInterface.live(function(event, datum) {
+            if (!event) {
                 var latestBasket = dataInterface.basket();
                 if (currData.length && latestBasket) {
                     var lastDatum = currData[currData.length - 1];
@@ -367,7 +367,9 @@
                     updateData(currData);
                     render();
                 }
-            } else { console.log('Error loading data from coinbase websocket: ' + err); }
+            } else if (event.code === 1000) {
+                console.log('Websocket closing');
+            } else { console.log('Error loading data from coinbase websocket: ' + event); }
         });
     });
 
