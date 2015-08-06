@@ -22,6 +22,29 @@
         return extent;
     }
 
+    function combineData(histBasket, liveBasket) {
+        // check they have overlapping dates?
+        var basket = {
+            date: histBasket.date,
+            open: histBasket.open,
+            volume: histBasket.volume
+        };
+
+        basket.close = liveBasket.close;
+        basket.high = Math.max(histBasket.high, liveBasket.high);
+        basket.low = Math.min(histBasket.low, liveBasket.low);
+        basket.volume += liveBasket.volume;
+
+        return basket;
+    }
+
+    function candlesDate(n, period) {
+        var end = new Date();
+        // n candles into the past
+        var start = new Date(end.getTime() - (n * 1000 * dataInterface.period()));
+        return [start, end];
+    }
+
     // Set SVGs & column padding
     var container = d3.select('#chart-example');
 
@@ -45,24 +68,23 @@
         .product('BTC-USD');
 
     var currData = [];
-        
+
+    function renderCallback(err, data) {
+        if (!err) {
+            updateData(data);
+            resetToLive();
+            render();
+        } else { console.log('Error: ' + err); }
+    }
+
     d3.select('#period-selection')
         .on('change', function() {
             var period = parseInt(d3.select(this).property('value'));
             dataInterface.period(period);
-            function cb(data) { // pull out as more general 'update/render' function, as is used multiple times
-                updateData(data);
-                resetToLive();
-                render();
-            }
-            //if (currData.length) {
-            //    cb(currData);
-            //} else { 
-            var dates = candlesDate(199, dataInterface.period())
-            dataInterface.getData(dates[0], dates[1], function(data) { 
-                cb(data);
-            });
-            //}
+            currData = [];
+            render(); // render loading screen
+            var dates = candlesDate(199, dataInterface.period());
+            dataInterface.getData(dates[0], dates[1], renderCallback);
         });
 
     d3.select('#product-selection')
@@ -70,13 +92,10 @@
             var product = d3.select(this).property('value');
             // Would be nice to base this selection off the products list
             dataInterface.product(product);
-            
-            var dates = candlesDate(199, dataInterface.period())
-            dataInterface.getData(dates[0], dates[1], function(data) {
-                updateData(data);
-                resetToLive();
-                render();
-            });
+            currData = [];
+            render(); // render loading screen
+            var dates = candlesDate(199, dataInterface.period());
+            dataInterface.getData(dates[0], dates[1], renderCallback);
         });
 
     // Set Reset button event
@@ -91,6 +110,7 @@
     }
 
     container.select('#reset-button').on('click', function() {
+        if (!currData.length) { return; }
         resetToLive();
         render();
     });
@@ -264,7 +284,7 @@
     // Later this can hold all the functions that req updating with data (eg moving average)
     function updateData(data) {
         currData = data;
-        
+
         movingAverage(data);
         rsiAlgorithm(data);
 
@@ -284,6 +304,17 @@
     }
 
     function render() {
+        // If loading
+        if (!currData.length) {
+            svgMain.selectAll('*').remove();
+            svgMain.append('text')
+                .text('loading...');
+            svgRSI.selectAll('*').remove();
+            svgNav.selectAll('*').remove();
+
+            return;
+
+        }
         svgMain.call(mainChart);
         svgRSI.call(rsiChart);
         svgNav.call(navChart);
@@ -313,68 +344,33 @@
             .attr('height', navAspect * targetWidth);
         rsi.yScale().range([rsiAspect * targetWidth, 0]);
         volume.yScale().range([rsiAspect * targetWidth, rsiAspect * targetWidth / 2]);
+
         render();
     }
 
     d3.select(window).on('resize', resize);
 
-    // Would be nice to have an initial chart axes/etc showing, without data + 'loading' text
-
     // Initialize
-    
-    
-    var dates = candlesDate(199, dataInterface.period())
-    dataInterface.getData(dates[0], dates[1], function(data) {
-        // Using golden ratio to make initial display area rectangle into the golden rectangle
-        updateData(data);
-        resetToLive();
-        render();
+    var dates = candlesDate(199, dataInterface.period());
+    dataInterface.getData(dates[0], dates[1], function(err, data) {
+        renderCallback(err, data);
         resize();
         // Once initial historic data is loaded, start streaming live data
-        // see if this works when activated outside of getData cb
-        dataInterface.live(function() {
-            // here is where we should be combining data
-            //console.log("Maybe this doesnt always exist!");
-            //
-            var latestBasket = dataInterface.basket();
-            if (latestBasket == null) {
-                return;
-            }
-            
-            if (currData.length) { // could alternatively load all data again when new basket finished/not overlapping?
-                //console.log(data)
-                var lastDatum = currData[currData.length - 1];
-                if (lastDatum.date.getTime() + (dataInterface.period() * 1000) >= latestBasket.date.getTime()) {
-                    currData[currData.length - 1] = combineData(lastDatum, latestBasket);
-                } else { currData.push(latestBasket); }
-                updateData(currData);
-                render();
-            }
+        dataInterface.live(function(err, datum) {
+            if (!err) {
+                var latestBasket = dataInterface.basket();
+                if (currData.length && latestBasket) {
+                    var lastDatum = currData[currData.length - 1];
+                    if (lastDatum.date.getTime() + (dataInterface.period() * 1000) >= latestBasket.date.getTime()) {
+                        currData[currData.length - 1] = combineData(lastDatum, latestBasket);
+                    } else { currData.push(latestBasket); }
+                    updateData(currData);
+                    render();
+                }
+            } else { console.log('Error loading data from coinbase websocket: ' + err); }
         });
     });
-    
-    
-    function combineData(histBasket, liveBasket) {
-        // check they have overlapping dates?
-        var basket = {
-            date: histBasket.date,
-            open: histBasket.open,
-            volume: histBasket.volume
-        };
 
-        basket.close = liveBasket.close;
-        basket.high = Math.max(histBasket.high, liveBasket.high);
-        basket.low = Math.min(histBasket.low, liveBasket.low);
-        basket.volume += liveBasket.volume;
 
-        return basket;
-    }
-    
-    function candlesDate(n, period) {
-        var end = new Date();
-        // n candles into the past
-        var start = new Date(end.getTime() - (n * 1000 * dataInterface.period())); 
-        return [start, end];
-    }
 
 })(d3, fc, sc);

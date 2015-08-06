@@ -1,15 +1,13 @@
 (function(sc) {
     'use strict';
     sc.data.feed.coinbase.websocket = function() {
-        // can get product list from /products
         var product = 'BTC-USD';
-        var productList = [];
         var msgType = 'match';
         var coinbaseSocket = null;
         var callback = null; // not sure we want to be storing things like this?
 
         function websocket(cb) {
-            var coinbaseSocket = new WebSocket('wss://ws-feed.exchange.coinbase.com');
+            coinbaseSocket = new WebSocket('wss://ws-feed.exchange.coinbase.com');
             var msg = {
                 type: 'subscribe',
                 'product_id': product
@@ -22,21 +20,24 @@
             };
 
             coinbaseSocket.onmessage = function(event) {
-                var jMsg = JSON.parse(event.data);
-                if (jMsg.type === msgType) {
+                var messageData = JSON.parse(event.data);
+                if (messageData.type === msgType) {
                     var datum = {};
-                    datum.date = new Date(jMsg.time);
-                    datum.price = parseFloat(jMsg.price);
-                    datum.volume = parseFloat(jMsg.size);
-                    console.log(datum);
-                    // Pass errors back also
-                    cb(datum);
+                    datum.date = new Date(messageData.time);
+                    datum.price = parseFloat(messageData.price);
+                    datum.volume = parseFloat(messageData.size);
+                    cb(null, datum);
                 }
             };
 
             coinbaseSocket.onerror = function(err) {
-                console.log('Error loading data from coinbase websocket: ' + err);
+                cb(err, null);
             };
+
+            coinbaseSocket.onclose = function() {
+                cb('close', null);
+            };
+
         }
 
         websocket.close = function() {
@@ -45,15 +46,15 @@
             }
         };
 
-        websocket.msgType = function(msgType) {
+        websocket.msgType = function(x) {
             if (!arguments.length) { return msgType; }
-            msgType = msgType;
+            msgType = x;
             return websocket;
         };
 
-        websocket.product = function(product) {
+        websocket.product = function(x) {
             if (!arguments.length) { return product; }
-            product = product;
+            product = x;
             if (coinbaseSocket) {
                 coinbaseSocket.close();
                 websocket(callback);
@@ -62,40 +63,39 @@
         };
 
         websocket.getProductList = function(cb) {
-            if (productList) { cb(productList); }
             d3.json('https://api.exchange.coinbase.com/products/', function(err, data) {
                 // jscs:disable
-                productList = data.map(function(currValue) { return currValue.display_name; });
+                var productList = data.map(function(currValue) { return currValue.display_name; });
                 // jscs:enable
                 cb(productList);
             });
         };
 
-        return websocket;  
+        return websocket;
     };
-    
+
     sc.data.OHLC = function() {
         // Expects transactions with a price, volume and date and organizes them into candles of given periods
         var currentBasket = null;
         var period = 60 * 60 * 24;
         var liveFeed = null;
-        
+
         function OHLC(callback) {
             liveFeed(function(datum) {
                 updateBasket(datum);
                 callback(datum);
             });
         }
-        
+
         OHLC.liveFeed = function(x) {
             if (!arguments.length) { return liveFeed; }
             liveFeed = x;
             currentBasket = null;
-            // Maybe OHLC should store product/msgType and init liveFeed with these conditions when first set? 
+            // This requires liveFeed to be set up first, before changing prodcut/etc on liveFeed
             d3.rebind(OHLC, liveFeed, 'product', 'msgType', 'close');
             return OHLC;
-        }
-        
+        };
+
         function updateBasket(datum) {
             if (currentBasket == null) {
                 createNewBasket(datum);
@@ -104,8 +104,7 @@
             var startTime = currentBasket.date.getTime();
             var msPeriod = period * 1000;
             if (latestTime > startTime + msPeriod) {
-                // have OHLC round dates? or round dates outside of class?
-               createNewBasket(datum);
+                createNewBasket(datum);
             } else {
                 // Update current basket
                 currentBasket.close = datum.price;
@@ -114,7 +113,7 @@
                 currentBasket.volume += datum.volume;
             }
         }
-        
+
         OHLC.period = function(x) {
             if (!arguments.length) { return period; }
             period = x;
@@ -125,7 +124,7 @@
         OHLC.basket = function(x) {
             return currentBasket;
         };
-        
+
         function createNewBasket(datum) {
             currentBasket = {
                 date: datum.date,
@@ -139,6 +138,6 @@
 
         return OHLC;
     };
-    
-    
+
+
 })(sc);
