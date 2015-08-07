@@ -102,6 +102,7 @@
     d3.select('#period-selection')
         .on('change', function() {
             var period = parseInt(d3.select(this).property('value'));
+            // could put this change in the callback, then it wouldnt be messed up on out of sync dropdown change
             dataInterface.period(period);
             currData = [];
             render(); // render loading screen

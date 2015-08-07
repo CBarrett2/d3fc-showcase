@@ -5,7 +5,8 @@
         var msgType = 'match';
         var coinbaseSocket = null;
 
-        function websocket(cb) {
+        function webSocket(cb) {
+            webSocket.close();
             coinbaseSocket = new WebSocket('wss://ws-feed.exchange.coinbase.com');
             var msg = {
                 type: 'subscribe',
@@ -24,6 +25,7 @@
                     datum.date = new Date(messageData.time);
                     datum.price = parseFloat(messageData.price);
                     datum.volume = parseFloat(messageData.size);
+                    console.log(datum);
                     cb(null, datum);
                 }
             };
@@ -38,40 +40,38 @@
 
         }
 
-        websocket.close = function() {
+        webSocket.close = function() {
             if (coinbaseSocket) {
                 coinbaseSocket.close();
             }
-            return websocket;
+            return webSocket;
         };
 
-        websocket.msgType = function(x) {
+        webSocket.messageType = function(x) {
             if (!arguments.length) {
                 return msgType;
             }
             msgType = x;
-            return websocket;
+            return webSocket;
         };
 
-        websocket.product = function(x) {
+        webSocket.product = function(x) {
             if (!arguments.length) {
                 return product;
             }
             product = x;
-            return websocket;
+            return webSocket;
         };
 
-        websocket.getProductList = function(cb) {
-            d3.json('https://api.exchange.coinbase.com/products/', function(err, data) {
-                // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
-                var productList = data.map(function(product) { return product.display_name; });
-                // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
+        webSocket.productList = function(cb) {
+            d3.json('https://api.exchange.coinbase.com/products/', function(err, products) {
+                var productList = products.map(function(product) { return product.id; });
                 cb(err, productList);
             });
-            return websocket;
+            return webSocket;
         };
 
-        return websocket;
+        return webSocket;
     };
 
 })(sc);

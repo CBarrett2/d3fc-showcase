@@ -1,6 +1,6 @@
 (function(sc) {
     'use strict';
-    sc.data.ohlc = function() {
+    sc.data.feed.coinbase.ohlcWebSocketAdaptor = function() {
         // Expects transactions with a price, volume and date and organizes them into candles of given periods
         // Re-call OHLC whenever you want to start collecting for a new period/product
         // In seconds
@@ -8,13 +8,12 @@
         var liveFeed = sc.data.feed.coinbase.websocket();
 
         function ohlc(cb) {
-            liveFeed.close();
-            var currentBasket = null;
+            var basket = null;
             liveFeed(function(err, datum) {
                 if (datum) {
-                    currentBasket = updateBasket(currentBasket, datum);
+                    basket = updateBasket(basket, datum);
                 }
-                cb(err, currentBasket);
+                cb(err, basket);
             });
         }
 
@@ -26,7 +25,7 @@
             return ohlc;
         };
 
-        d3.rebind(ohlc, liveFeed, 'product');
+        d3.rebind(ohlc, liveFeed, 'product', 'messageType', 'productList');
 
         function updateBasket(basket, datum) {
             if (basket == null) {
@@ -42,12 +41,7 @@
                 basket.high = Math.max(basket.high, datum.price);
                 basket.low = Math.min(basket.low, datum.price);
                 basket.volume += datum.volume;
-                // Messages can arrive out of order, so in this case we might want to update the open
-                if (latestTime < basket.date.getTime()) {
-                    basket.open = datum.price;
-                } else {
-                    basket.close = datum.price;
-                }
+                basket.close = datum.price;
             }
             return basket;
         }
