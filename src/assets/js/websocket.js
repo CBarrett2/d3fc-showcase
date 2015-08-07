@@ -65,8 +65,7 @@
 
         webSocket.productList = function(cb) {
             d3.json('https://api.exchange.coinbase.com/products/', function(err, products) {
-                var productList = products.map(function(product) { return product.id; });
-                cb(err, productList);
+                cb(err, products);
             });
             return webSocket;
         };
