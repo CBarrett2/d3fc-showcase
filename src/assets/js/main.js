@@ -23,7 +23,6 @@
     }
 
     function combineData(histBasket, liveBasket) {
-        // check they have overlapping dates?
         var basket = {
             date: histBasket.date,
             open: histBasket.open,
@@ -68,9 +67,10 @@
         .product('BTC-USD');
 
     var currData = [];
-
+    var lastDatum = null;
     function renderCallback(err, data) {
         if (!err) {
+            lastDatum = data[data.length - 1];
             updateData(data);
             resetToLive();
             render();
@@ -360,10 +360,13 @@
             if (!event) {
                 var latestBasket = dataInterface.basket();
                 if (currData.length && latestBasket) {
-                    var lastDatum = currData[currData.length - 1];
+
                     if (lastDatum.date.getTime() + (dataInterface.period() * 1000) >= latestBasket.date.getTime()) {
                         currData[currData.length - 1] = combineData(lastDatum, latestBasket);
-                    } else { currData.push(latestBasket); }
+                    } else {
+                        lastDatum = latestBasket;
+                        currData.push(latestBasket);
+                    }
                     updateData(currData);
                     render();
                 }
@@ -373,7 +376,5 @@
             } else { console.log('Error loading data from coinbase websocket: ' + event); }
         });
     });
-
-
 
 })(d3, fc, sc);

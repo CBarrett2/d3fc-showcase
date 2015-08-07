@@ -62,9 +62,9 @@
 
         websocket.getProductList = function(cb) {
             d3.json('https://api.exchange.coinbase.com/products/', function(err, data) {
-                // jscs:disable
+                // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
                 var productList = data.map(function(product) { return product.display_name; });
-                // jscs:enable
+                // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
                 cb(err, productList);
             });
             return websocket;
