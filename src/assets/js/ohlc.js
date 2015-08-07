@@ -26,7 +26,7 @@
         };
 
         d3.rebind(ohlc, liveFeed, 'product', 'messageType', 'productList');
-        
+
         function updateBasket(basket, datum) {
             if (basket == null) {
                 basket = createNewBasket(datum, datum.date);
