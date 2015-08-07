@@ -61,19 +61,41 @@
 
     // Period is defined in seconds
     var dataInterface = sc.data.dataInterface()
-        .liveFeed(sc.data.feed.coinbase.websocket())
+        //.liveFeed(sc.data.feed.coinbase.websocket())
         .historicFeed(fc.data.feed.coinbase())
         .period(60 * 60 * 12)
         .product('BTC-USD');
 
     var currData = [];
     var lastDatum = null;
-    function renderCallback(err, data) {
+
+    function liveCallback(event, latestBasket) {
+        if (!event) {
+            if (currData.length && latestBasket) {
+                // check only if basket date has changed
+                if (lastDatum.date.getTime() + (dataInterface.period() * 1000) >= latestBasket.date.getTime()) {
+                    currData[currData.length - 1] = combineData(lastDatum, latestBasket);
+                } else {
+                    lastDatum = latestBasket;
+                    currData.push(latestBasket);
+                }
+                updateData(currData);
+                render();
+            }
+        } else if (event.type === 'open' || event.type === 'close') {
+            // I don't think there's any need for a message on successful open or close
+            // console.log('Websocket closing');
+            // maybe check if event.type === 'error'?
+        } else { console.log('Error loading data from coinbase websocket: ' + event); }
+    }
+
+    function historicCallback(err, data) {
         if (!err) {
             lastDatum = data[data.length - 1];
             updateData(data);
             resetToLive();
             render();
+            dataInterface.live(liveCallback);
         } else { console.log('Error: ' + err); }
     }
 
@@ -84,7 +106,7 @@
             currData = [];
             render(); // render loading screen
             var dates = candlesDate(199, dataInterface.period());
-            dataInterface.getData(dates[0], dates[1], renderCallback);
+            dataInterface.getData(dates[0], dates[1], historicCallback);
         });
 
     d3.select('#product-selection')
@@ -95,7 +117,7 @@
             currData = [];
             render(); // render loading screen
             var dates = candlesDate(199, dataInterface.period());
-            dataInterface.getData(dates[0], dates[1], renderCallback);
+            dataInterface.getData(dates[0], dates[1], historicCallback);
         });
 
     // Set Reset button event
@@ -353,28 +375,9 @@
     // Initialize
     var dates = candlesDate(199, dataInterface.period());
     dataInterface.getData(dates[0], dates[1], function(err, data) {
-        renderCallback(err, data);
+        historicCallback(err, data);
         resize();
         // Once initial historic data is loaded, start streaming live data
-        dataInterface.live(function(event, datum) {
-            if (!event) {
-                var latestBasket = dataInterface.basket();
-                if (currData.length && latestBasket) {
-
-                    if (lastDatum.date.getTime() + (dataInterface.period() * 1000) >= latestBasket.date.getTime()) {
-                        currData[currData.length - 1] = combineData(lastDatum, latestBasket);
-                    } else {
-                        lastDatum = latestBasket;
-                        currData.push(latestBasket);
-                    }
-                    updateData(currData);
-                    render();
-                }
-            } else if (event.code === 1000) {
-                // I don't think there's any need for a message
-                // console.log('Websocket closing');
-            } else { console.log('Error loading data from coinbase websocket: ' + event); }
-        });
     });
 
 })(d3, fc, sc);

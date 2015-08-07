@@ -2,83 +2,58 @@
     'use strict';
     sc.data.ohlc = function() {
         // Expects transactions with a price, volume and date and organizes them into candles of given periods
-        var currentBasket = null;
+        // Re-call OHLC whenever you want to start collecting for a new period/product
         // In seconds
         var period = 60 * 60 * 24;
         var liveFeed = sc.data.feed.coinbase.websocket();
-        var callback = function(event, datum) { return; };
 
         function ohlc(cb) {
-            if (cb) {
-                callback = cb;
-            }
+            liveFeed.close();
+            var currentBasket = null;
             liveFeed(function(err, datum) {
                 if (datum) {
-                    updateBasket(datum);
+                    currentBasket = updateBasket(currentBasket, datum);
                 }
-                callback(err, datum);
+                cb(err, currentBasket);
             });
         }
-
-        ohlc.liveFeed = function(x) {
-            if (!arguments.length) {
-                return liveFeed;
-            }
-            liveFeed = x;
-            currentBasket = null;
-            return ohlc;
-        };
-
-        ohlc.product = function(x) {
-            if (!arguments.length) {
-                return liveFeed.product();
-            }
-            liveFeed.product(x);
-            // Restart liveFeed
-            liveFeed.close();
-            ohlc();
-            currentBasket = null;
-            return ohlc;
-        };
 
         ohlc.period = function(x) {
             if (!arguments.length) {
                 return period;
             }
             period = x;
-            currentBasket = null;
             return ohlc;
         };
 
-        ohlc.basket = function() {
-            return currentBasket;
-        };
+        d3.rebind(ohlc, liveFeed, 'product');
 
-        function updateBasket(datum) {
-            if (currentBasket == null) {
-                createNewBasket(datum);
+        function updateBasket(basket, datum) {
+            if (basket == null) {
+                basket = createNewBasket(datum);
             }
             var latestTime = datum.date.getTime();
-            var startTime = currentBasket.date.getTime();
+            var startTime = basket.date.getTime();
             var msPeriod = period * 1000;
             if (latestTime > startTime + msPeriod) {
-                createNewBasket(datum);
+                basket = createNewBasket(datum);
             } else {
                 // Update current basket
-                currentBasket.high = Math.max(currentBasket.high, datum.price);
-                currentBasket.low = Math.min(currentBasket.low, datum.price);
-                currentBasket.volume += datum.volume;
+                basket.high = Math.max(basket.high, datum.price);
+                basket.low = Math.min(basket.low, datum.price);
+                basket.volume += datum.volume;
                 // Messages can arrive out of order, so in this case we might want to update the open
-                if (latestTime < currentBasket.date.getTime()) {
-                    currentBasket.open = datum.price;
+                if (latestTime < basket.date.getTime()) {
+                    basket.open = datum.price;
                 } else {
-                    currentBasket.close = datum.price;
+                    basket.close = datum.price;
                 }
             }
+            return basket;
         }
 
         function createNewBasket(datum) {
-            currentBasket = {
+            return {
                 date: datum.date,
                 open: datum.price,
                 close: datum.price,

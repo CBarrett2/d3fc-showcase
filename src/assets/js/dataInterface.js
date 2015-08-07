@@ -28,6 +28,7 @@
             });
         };
 
+        // Could rebind as ohlc?
         dataInterface.live = function(callback) {
             ohlc(callback);
             return dataInterface;
@@ -40,7 +41,7 @@
             return dataInterface;
         };
 
-        d3.rebind(dataInterface, ohlc, 'liveFeed', 'basket');
+        d3.rebind(dataInterface, ohlc, 'liveFeed');
 
         dataInterface.historicFeed = function(x) {
             if (!arguments.length) { return historicFeed; }

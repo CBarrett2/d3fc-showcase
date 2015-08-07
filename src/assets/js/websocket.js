@@ -12,8 +12,9 @@
                 'product_id': product
             };
 
-            coinbaseSocket.onopen = function() {
+            coinbaseSocket.onopen = function(event) {
                 coinbaseSocket.send(JSON.stringify(msg));
+                cb(event, null);
             };
 
             coinbaseSocket.onmessage = function(event) {
@@ -38,7 +39,7 @@
         }
 
         websocket.close = function() {
-            if (coinbaseSocket && coinbaseSocket.readyState === 1) {
+            if (coinbaseSocket) {
                 coinbaseSocket.close();
             }
             return websocket;
