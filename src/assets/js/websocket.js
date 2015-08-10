@@ -1,8 +1,8 @@
 (function(sc) {
     'use strict';
-    sc.data.feed.coinbase.websocket = function() {
+    sc.data.feed.coinbase.webSocket = function() {
         var product = 'BTC-USD';
-        var msgType = 'received';
+        var msgType = 'match';
         var coinbaseSocket = null;
 
         function webSocket(cb) {

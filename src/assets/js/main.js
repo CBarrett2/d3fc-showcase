@@ -29,7 +29,7 @@
     var svgRSI = container.select('svg.rsi');
     var svgNav = container.select('svg.nav');
 
-    var navAspect = null;
+    var navAspect;
     function calculateDimensions() {
         var leftPadding = parseInt(container.select('.col-md-12').style('padding-left'), 10);
         var rightPadding = parseInt(container.select('.col-md-12').style('padding-right'), 10);
@@ -72,56 +72,27 @@
 
     }
 
-
     var ohlc = sc.data.feed.coinbase.ohlcWebSocketAdaptor();
     var currData = fc.data.random.financial()(250);
+
     function liveCallback(event, latestBasket) {
         if (!event && latestBasket) {
             if (!currData.length) {
                 currData = [latestBasket];
                 resetToLive();
+            } else if (currData[currData.length - 1].date.getTime() !== latestBasket.date.getTime()) {
+                currData.push(latestBasket);
             }
-            currData = [latestBasket];
             render();
-        } else if (event.type === 'open' || event.type === 'close') {
-            // I don't think there's any need for a message on successful open or close
-        } else { console.log('Error loading data from coinbase websocket: ' + event); }
+        } else if (event.type === 'open') {
+            loading(true, 'Connected, waiting for data...');
+        } else if (event.type === 'close') {
+            // I don't think there's any need for a message on successful close
+        } else {
+            loading(true, 'Error loading data from coinbase websocket: ' + event);
+        }
     }
 
-    d3.select('#type-selection')
-        .on('change', function() {
-            var type = d3.select(this).property('value');
-            if (type === 'live') {
-                currData = [];
-                ohlc(liveCallback);
-            } else if (type === 'fake') {
-                // maybe generate from scratch
-                ohlc.close();
-                currData = fc.data.random.financial()(250);
-                resetToLive();
-                render();
-            }
-        });
-
-    d3.select('#period-selection')
-        .on('change', function() {
-            var period = parseInt(d3.select(this).property('value'));
-            ohlc.period(period);
-            currData = [];
-            ohlc(liveCallback);
-        });
-
-    calculateDimensions();
-
-    d3.select('#product-selection')
-        .on('change', function() {
-            var product = d3.select(this).property('value');
-            // Would be nice to base this selection off the products list
-            ohlc.product(product);
-            currData = [];
-            ohlc(liveCallback);
-        });
-    // Set Reset button event
     function resetToLive() {
         // Using golden ratio to make initial display area rectangle into the golden rectangle
         if (!currData.length) {
@@ -135,7 +106,52 @@
         render();
     }
 
-    container.select('#reset-button').on('click', resetToLive);
+    d3.select('#type-selection')
+        .on('change', function() {
+            var type = d3.select(this).property('value');
+            if (type === 'live') {
+                d3.select('#period-span').style('visibility', 'visible');
+                d3.select('#product-span').style('visibility', 'visible');
+                currData = [];
+                loading(true, 'Connecting to websocket...');
+                render();
+                ohlc(liveCallback);
+            } else if (type === 'fake') {
+                // maybe generate from scratch
+                d3.select('#period-span').style('visibility', 'hidden');
+                d3.select('#product-span').style('visibility', 'hidden');
+                ohlc.close();
+                currData = fc.data.random.financial()(250);
+                // No need for loading text as this will be instant
+                resetToLive();
+                render();
+            }
+        });
+
+    d3.select('#period-selection')
+        .on('change', function() {
+            var period = parseInt(d3.select(this).property('value'));
+            ohlc.period(period);
+            currData = [];
+            loading(true, 'Connecting to websocket...');
+            render();
+            ohlc(liveCallback);
+        });
+
+
+
+    d3.select('#product-selection')
+        .on('change', function() {
+            var product = d3.select(this).property('value');
+            // Would be nice to base this selection off the products list
+            ohlc.product(product);
+            currData = [];
+            loading(true, 'Connecting to websocket...');
+            render();
+            ohlc(liveCallback);
+        });
+
+
 
     // Create main chart and set how much data is initially viewed
     var timeSeries = fc.chart.linearTimeSeries()
@@ -313,20 +329,45 @@
         selection.call(navTimeSeries);
     };
 
+    function loading(bool, text) {
+        if (bool) {
+            // Loading
+            svgMain.style('visibility', 'hidden');
+            svgRSI.style('visibility', 'hidden');
+            svgNav.style('visibility', 'hidden');
+
+            d3.select('#loading-text')
+                .style('visibility', 'visible')
+                .text(text);
+        } else {
+            svgMain.style('visibility', 'visible');
+            svgRSI.style('visibility', 'visible');
+            svgNav.style('visibility', 'visible');
+
+            d3.select('#loading-text')
+                .style('visibility', 'hidden');
+        }
+
+        var type = d3.select('#type-selection').property('value');
+        if (type === 'live') {
+            svgRSI.style('visibility', 'hidden');
+            svgNav.style('visibility', 'hidden');
+        }
+    }
+
     function render() {
         if (!currData.length) {
             return;
         }
+
         svgMain.datum(currData)
             .call(mainChart);
 
         svgRSI.datum(currData)
             .call(rsiChart);
 
-        if (currData.length > 1) {
-            svgNav.datum(currData)
-                .call(navChart);
-        }
+        svgNav.datum(currData)
+            .call(navChart);
     }
 
     function resize() {
@@ -334,6 +375,14 @@
         render();
     }
 
+    d3.select('#period-span').style('visibility', 'hidden');
+    d3.select('#product-span').style('visibility', 'hidden');
+    d3.select('#loading-text')
+        .style('visibility', 'hidden');
+
+    calculateDimensions();
+
+    container.select('#reset-button').on('click', resetToLive);
     d3.select(window).on('resize', resize);
     resize();
     resetToLive();
