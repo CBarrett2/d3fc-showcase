@@ -80,6 +80,7 @@
             if (!currData.length) {
                 currData = [latestBasket];
                 resetToLive();
+                loading(false, '');
             } else if (currData[currData.length - 1].date.getTime() !== latestBasket.date.getTime()) {
                 currData.push(latestBasket);
             }
@@ -121,6 +122,7 @@
                 d3.select('#period-span').style('visibility', 'hidden');
                 d3.select('#product-span').style('visibility', 'hidden');
                 ohlc.close();
+                loading(false, '');
                 currData = fc.data.random.financial()(250);
                 // No need for loading text as this will be instant
                 resetToLive();
@@ -343,7 +345,6 @@
             svgMain.style('visibility', 'visible');
             svgRSI.style('visibility', 'visible');
             svgNav.style('visibility', 'visible');
-
             d3.select('#loading-text')
                 .style('visibility', 'hidden');
         }

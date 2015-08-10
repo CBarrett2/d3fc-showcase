@@ -2,7 +2,7 @@
     'use strict';
     sc.data.feed.coinbase.webSocket = function() {
         var product = 'BTC-USD';
-        var msgType = 'match';
+        var msgType = 'received';
         var coinbaseSocket = null;
 
         function webSocket(cb) {
