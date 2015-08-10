@@ -26,29 +26,35 @@
         </div>
       </div>
       
-      <div class="row" id="selection-row">
+      <div class="row" id="selection-row"> 
         <h2> Data Source </h2>
+        <div class="col-md-2">
           Type
-          <select id="type-selection" class="dropdown">
-            <option value="fake">fake</option>
-            <option value="live">live</option>
+          <select id="type-selection" selected="type" class="form-control">
+            <option value="fake">Data generator</option>
+            <option value="live">Live data</option>
           </select>
+        </div>
+        <div class="col-md-2">
           <span id="period-span">
             Period
-            <select id="period-selection">
+            <select id="period-selection" class="form-control">
               <option value="43200">12hr</option>
               <option value="3600">1hr</option>
               <option value="50">1min</option>
             </select>
           </span>
+        </div>
+        <div class="col-md-2">
           <span id="product-span">
             Product
-            <select id="product-selection">
+            <select id="product-selection" class="form-control">
               <option value="BTC-USD">BTC/USD</option>
               <option value="BTC-EUR">BTC/EUR</option>
               <option value="BTC-GBP">BTC/GBP</option>
             </select>
           </span>
+        </div>
       </div>
       
       <p id="loading-text"> </p>
