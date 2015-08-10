@@ -3,7 +3,6 @@
 
     sc.data.dataInterface = function() {
         // In seconds - maybe take this out and have chart pass in a period whenever needed
-        // We could potentially hold period in chart, rather than dataInterface
         var period = 60 * 60 * 24;
         var historicFeed = fc.data.feed.coinbase();
         var ohlc = sc.data.feed.coinbase.ohlcWebSocketAdaptor();
@@ -27,9 +26,6 @@
 
         d3.rebind(dataInterface, ohlc, 'close');
 
-        // this is basically just a rebinding of ohlc and coinbase! only new functionality is cb outdating +
-        // maybe altering both params at once
-        // Could rebind as ohlc?
         dataInterface.live = function(callback) {
             ohlc(callback);
             return dataInterface;
@@ -41,8 +37,6 @@
             ohlc.period(x);
             return dataInterface;
         };
-
-        //d3.rebind(dataInterface, ohlc, 'liveFeed');
 
         dataInterface.historicFeed = function(x) {
             if (!arguments.length) { return historicFeed; }

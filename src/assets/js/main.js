@@ -14,7 +14,7 @@
     function padExtent(extent) {
         /* Applies the fc.util.extent function to find the extent of dates,
         but adds a buffer of one day to either side */
-        var period = ohlc.period();
+        var period = dataInterface.period();
 
         extent[0] = d3.time.second.offset(new Date(extent[0]), -period);
         extent[1] = d3.time.second.offset(new Date(extent[1]), +period);
@@ -94,7 +94,6 @@
 
     }
 
-    var ohlc = sc.data.feed.coinbase.ohlcWebSocketAdaptor();
     var dataInterface = sc.data.dataInterface()
         .period(60 * 60 * 12)
         .product('BTC-USD');
@@ -106,6 +105,9 @@
         if (!event && latestBasket && currData.length) {
             if (currData[currData.length - 1].date.getTime() + (dataInterface.period() * 1000) <=
                 latestBasket.date.getTime()) {
+                // Bit of a hack to get neat baskets
+                latestBasket.date = new Date(currData[currData.length - 1].date.getTime() +
+                    (dataInterface.period() * 1000));
                 currData.push(latestBasket);
             } else {
                 currData[currData.length - 1] = combineData(currData[currData.length - 1], latestBasket);
@@ -126,7 +128,6 @@
             resetToLive();
             loading(false, '');
             render();
-            console.log(timeSeries.xDomain());
             dataInterface.live(liveCallback);
         } else {
             loading(true, 'Error loading historic data: ' + event);
@@ -263,7 +264,6 @@
         var data = selection.datum();
         movingAverage(data);
 
-        timeSeries.xRange(fc.util.extent(data, ['low', 'open']));
 
         multi.mapping(function(series) {
             switch (series) {
