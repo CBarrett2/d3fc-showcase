@@ -22,6 +22,28 @@
         return extent;
     }
 
+    function candlesDate(n, period) {
+        var end = new Date();
+        // n candles into the past
+        var start = new Date(end.getTime() - (n * 1000 * dataInterface.period()));
+        return [start, end];
+    }
+
+    function combineData(histBasket, liveBasket) {
+        var basket = {
+            date: histBasket.date,
+            open: histBasket.open,
+            volume: histBasket.volume
+        };
+
+        basket.close = liveBasket.close;
+        basket.high = Math.max(histBasket.high, liveBasket.high);
+        basket.low = Math.min(histBasket.low, liveBasket.low);
+        basket.volume += liveBasket.volume;
+
+        return basket;
+    }
+
     // Set SVGs & column padding
     var container = d3.select('#chart-example');
 
@@ -73,24 +95,41 @@
     }
 
     var ohlc = sc.data.feed.coinbase.ohlcWebSocketAdaptor();
+    var dataInterface = sc.data.dataInterface()
+        .period(60 * 60 * 12)
+        .product('BTC-USD');
+
+
     var currData = fc.data.random.financial()(250);
 
     function liveCallback(event, latestBasket) {
-        if (!event && latestBasket) {
-            if (!currData.length) {
-                currData = [latestBasket];
-                resetToLive();
-                loading(false, '');
-            } else if (currData[currData.length - 1].date.getTime() !== latestBasket.date.getTime()) {
+        if (!event && latestBasket && currData.length) {
+            if (currData[currData.length - 1].date.getTime() + (dataInterface.period() * 1000) <=
+                latestBasket.date.getTime()) {
                 currData.push(latestBasket);
+            } else {
+                currData[currData.length - 1] = combineData(currData[currData.length - 1], latestBasket);
             }
             render();
         } else if (event.type === 'open') {
-            loading(true, 'Connected, waiting for data...');
+            //loading(true, 'Connected, waiting for data...');
         } else if (event.type === 'close') {
             // I don't think there's any need for a message on successful close
         } else {
             loading(true, 'Error loading data from coinbase websocket: ' + event);
+        }
+    }
+
+    function historicCallback(err, data) {
+        if (!err) {
+            currData = data;
+            resetToLive();
+            loading(false, '');
+            render();
+            console.log(timeSeries.xDomain());
+            dataInterface.live(liveCallback);
+        } else {
+            loading(true, 'Error loading historic data: ' + event);
         }
     }
 
@@ -114,14 +153,16 @@
                 d3.select('#period-span').style('visibility', 'visible');
                 d3.select('#product-span').style('visibility', 'visible');
                 currData = [];
-                loading(true, 'Connecting to websocket...');
+                loading(true, 'Connecting to coinbase...');
                 render();
-                ohlc(liveCallback);
+                var dates = candlesDate(199, dataInterface.period());
+                dataInterface.getData(dates[0], dates[1], historicCallback);
             } else if (type === 'fake') {
                 // maybe generate from scratch
                 d3.select('#period-span').style('visibility', 'hidden');
                 d3.select('#product-span').style('visibility', 'hidden');
-                ohlc.close();
+                dataInterface.close();
+                dataInterface.invalidateCallback();
                 loading(false, '');
                 currData = fc.data.random.financial()(250);
                 // No need for loading text as this will be instant
@@ -133,11 +174,12 @@
     d3.select('#period-selection')
         .on('change', function() {
             var period = parseInt(d3.select(this).property('value'));
-            ohlc.period(period);
+            dataInterface.period(period);
             currData = [];
-            loading(true, 'Connecting to websocket...');
+            loading(true, 'Connecting to coinbase...');
             render();
-            ohlc(liveCallback);
+            var dates = candlesDate(199, dataInterface.period());
+            dataInterface.getData(dates[0], dates[1], historicCallback);
         });
 
 
@@ -146,11 +188,12 @@
         .on('change', function() {
             var product = d3.select(this).property('value');
             // Would be nice to base this selection off the products list
-            ohlc.product(product);
+            dataInterface.product(product);
             currData = [];
-            loading(true, 'Connecting to websocket...');
+            loading(true, 'Connecting to coinbase...');
             render();
-            ohlc(liveCallback);
+            var dates = candlesDate(199, dataInterface.period());
+            dataInterface.getData(dates[0], dates[1], historicCallback);
         });
 
 
@@ -219,6 +262,8 @@
     var mainChart = function(selection) {
         var data = selection.datum();
         movingAverage(data);
+
+        timeSeries.xRange(fc.util.extent(data, ['low', 'open']));
 
         multi.mapping(function(series) {
             switch (series) {
@@ -349,11 +394,11 @@
                 .style('visibility', 'hidden');
         }
 
-        var type = d3.select('#type-selection').property('value');
-        if (type === 'live') {
-            svgRSI.style('visibility', 'hidden');
-            svgNav.style('visibility', 'hidden');
-        }
+        //var type = d3.select('#type-selection').property('value');
+        //if (type === 'live') {
+        //    svgRSI.style('visibility', 'hidden');
+        //    svgNav.style('visibility', 'hidden');
+        //}
     }
 
     function render() {
