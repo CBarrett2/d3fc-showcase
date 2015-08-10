@@ -25,7 +25,7 @@
             return ohlc;
         };
 
-        d3.rebind(ohlc, liveFeed, 'product', 'messageType', 'productList');
+        d3.rebind(ohlc, liveFeed, 'product', 'messageType', 'productList', 'close');
 
         function updateBasket(basket, datum) {
             if (basket == null) {

@@ -2,7 +2,7 @@
     'use strict';
     sc.data.feed.coinbase.websocket = function() {
         var product = 'BTC-USD';
-        var msgType = 'match';
+        var msgType = 'received';
         var coinbaseSocket = null;
 
         function webSocket(cb) {
@@ -59,13 +59,6 @@
                 return product;
             }
             product = x;
-            return webSocket;
-        };
-
-        webSocket.productList = function(cb) {
-            d3.json('https://api.exchange.coinbase.com/products/', function(err, products) {
-                cb(err, products);
-            });
             return webSocket;
         };
 
