@@ -91,7 +91,6 @@
     d3.select('#type-selection')
         .on('change', function() {
             var type = d3.select(this).property('value');
-            console.log(type);
             if (type === 'live') {
                 currData = [];
                 ohlc(liveCallback);
@@ -324,8 +323,10 @@
         svgRSI.datum(currData)
             .call(rsiChart);
 
-        svgNav.datum(currData)
-            .call(navChart);
+        if (currData.length > 1) {
+            svgNav.datum(currData)
+                .call(navChart);
+        }
     }
 
     function resize() {
