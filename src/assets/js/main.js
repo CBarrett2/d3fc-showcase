@@ -87,6 +87,7 @@
             // I don't think there's any need for a message on successful close
         } else if (event.type === 'close' && event.code === 1006) {
             // Re-initiate connection
+            console.log('Re-initiating connection...');
             hideOrShowChartsAndSetLoadingText(true, 'Re-initiating connection...');
             ohlc(liveCallback);
         } else {

@@ -6,7 +6,7 @@
         var product = 'BTC-USD';
         var ticker = null;
 
-        function randInt(low, high) {
+        function rand(low, high) {
             return (Math.random() * (high - low)) + low;
         }
 
@@ -23,8 +23,8 @@
             var n = 0;
             ticker = setInterval(function() {
                 var datum = {
-                    price: randInt(200 + n++, 210 + n++),
-                    volume: randInt(1, 10),
+                    price: rand(200 + n++, 210 + n++),
+                    volume: rand(1, 10),
                     date: new Date()
                 };
                 callback(null, datum);
