@@ -29,6 +29,7 @@
         return [start, end];
     }
 
+    // This is partly repeating functionality in ohlc
     function combineData(histBasket, liveBasket) {
         var basket = {
             date: histBasket.date,
@@ -98,7 +99,6 @@
         .period(60 * 60 * 12)
         .product('BTC-USD');
 
-
     var currData = fc.data.random.financial()(250);
 
     function liveCallback(event, latestBasket) {
@@ -114,11 +114,11 @@
             }
             render();
         } else if (event.type === 'open') {
-            //loading(true, 'Connected, waiting for data...');
+            // No need for loading message, since historic data will load before live
         } else if (event.type === 'close') {
             // I don't think there's any need for a message on successful close
         } else {
-            loading(true, 'Error loading data from coinbase websocket: ' + event);
+            loading('Error loading data from coinbase websocket: ' + event);
         }
     }
 
@@ -126,11 +126,11 @@
         if (!err) {
             currData = data;
             resetToLive();
-            loading(false, '');
+            loading(null);
             render();
             dataInterface.live(liveCallback);
         } else {
-            loading(true, 'Error loading historic data: ' + event);
+            loading('Error loading historic data: ' + event);
         }
     }
 
@@ -154,7 +154,7 @@
                 d3.select('#period-span').style('visibility', 'visible');
                 d3.select('#product-span').style('visibility', 'visible');
                 currData = [];
-                loading(true, 'Connecting to coinbase...');
+                loading('Connecting to coinbase...');
                 render();
                 var dates = candlesDate(199, dataInterface.period());
                 dataInterface.getData(dates[0], dates[1], historicCallback);
@@ -164,7 +164,7 @@
                 d3.select('#product-span').style('visibility', 'hidden');
                 dataInterface.close();
                 dataInterface.invalidateCallback();
-                loading(false, '');
+                loading(null);
                 currData = fc.data.random.financial()(250);
                 // No need for loading text as this will be instant
                 resetToLive();
@@ -177,7 +177,7 @@
             var period = parseInt(d3.select(this).property('value'));
             dataInterface.period(period);
             currData = [];
-            loading(true, 'Connecting to coinbase...');
+            loading('Connecting to coinbase...');
             render();
             var dates = candlesDate(199, dataInterface.period());
             dataInterface.getData(dates[0], dates[1], historicCallback);
@@ -191,7 +191,7 @@
             // Would be nice to base this selection off the products list
             dataInterface.product(product);
             currData = [];
-            loading(true, 'Connecting to coinbase...');
+            loading('Connecting to coinbase...');
             render();
             var dates = candlesDate(199, dataInterface.period());
             dataInterface.getData(dates[0], dates[1], historicCallback);
@@ -376,8 +376,8 @@
         selection.call(navTimeSeries);
     };
 
-    function loading(bool, text) {
-        if (bool) {
+    function loading(text) {
+        if (text) {
             // Loading
             svgMain.style('visibility', 'hidden');
             svgRSI.style('visibility', 'hidden');

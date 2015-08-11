@@ -26,6 +26,11 @@
 
         d3.rebind(dataInterface, ohlc, 'close');
 
+        dataInterface.invalidateCallback = function() {
+            n++;
+            return dataInterface;
+        };
+
         dataInterface.live = function(callback) {
             ohlc(callback);
             return dataInterface;
