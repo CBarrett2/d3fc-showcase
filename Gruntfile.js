@@ -80,6 +80,12 @@ module.exports = function(grunt) {
                     expand: true
                 },
                 {
+                    cwd: 'node_modules/jquery/dist',
+                    src: ['jquery.min.js'],
+                    dest: 'dist/assets/js',
+                    expand: true
+                },
+                {
                     cwd: 'node_modules/d3fc/node_modules/d3/',
                     src: ['d3.js'],
                     dest: 'dist/assets/js',
@@ -205,7 +211,6 @@ module.exports = function(grunt) {
                 }
             }
         }
-
     });
 
     require('load-grunt-tasks')(grunt);

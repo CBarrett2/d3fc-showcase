@@ -11,11 +11,11 @@
     <link rel="stylesheet" href="assets/css/d3fc.css">
     <link rel="stylesheet" type="text/css" href="assets/css/style.css">
 
-    <script src="assets/js/d3.js"></script> 
+    <script src="assets/js/d3.js"></script>
     <script src="assets/js/Layout.js"></script>
     <script src="assets/js/d3fc.js"></script>
 
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="assets/js/jquery.min.js"></script>
     <script src="assets/js/bootstrap.min.js"></script>
   </head>
   <body>
@@ -25,23 +25,60 @@
           <button type="button" id="reset-button">Reset</button>
         </div>
       </div>
+      
+      <div class="row" id="selection-row"> 
+        <h2> Data Source </h2>
+        <div class="col-md-2">
+          Type
+          <select id="type-selection" selected="type" class="form-control">
+            <option value="fake">Data generator</option>
+            <option value="live">Live data</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <span id="period-span">
+            Period
+            <select id="period-selection" class="form-control">
+              <option value="43200">12hr</option>
+              <option value="3600">1hr</option>
+              <option value="50">1min</option>
+            </select>
+          </span>
+        </div>
+        <div class="col-md-2">
+          <span id="product-span">
+            Product
+            <select id="product-selection" class="form-control">
+              <option value="BTC-USD">BTC/USD</option>
+              <option value="BTC-EUR">BTC/EUR</option>
+              <option value="BTC-GBP">BTC/GBP</option>
+            </select>
+          </span>
+        </div>
+      </div>
+      
+      <p id="loading-text"> </p>
+      
       <div class="row">
         <div class="col-md-12">
           <svg class="main"></svg>
         </div>
       </div>
-      <div class="row"> 
+      <div class="row">
         <div class="col-md-12">
           <svg class="rsi"></svg>
         </div>
       </div>
-        <div class="row"> 
-          <div class="col-md-12">
-            <svg class="nav"></svg>
-          </div>
+      <div class="row"> 
+        <div class="col-md-12">
+          <svg class="nav"></svg>
         </div>
       </div>
     </div>
+    <script src="assets/js/sc.js"></script>
+    <script src="assets/js/webSocket.js"></script>
+    <script src="assets/js/fakeWebSocket.js"></script>
+    <script src="assets/js/ohlc.js"></script>
     <script src="assets/js/main.js"></script>
   </body>
 </html>
