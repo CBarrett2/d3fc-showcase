@@ -140,7 +140,6 @@
             } else {
                 currData[currData.length - 1] = latestBasket;
             }
-            console.log(currData);
             render();
         } else if (event.type === 'open') {
             // On successful open
