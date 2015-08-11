@@ -3,7 +3,7 @@
     sc.data.feed.coinbase.webSocket = function() {
         var product = 'BTC-USD';
         var msgType = 'match';
-        var coinbaseSocket = null;
+        var coinbaseSocket;
 
         function webSocket(cb) {
             webSocket.close();
@@ -25,6 +25,7 @@
                     datum.date = new Date(messageData.time);
                     datum.price = parseFloat(messageData.price);
                     datum.volume = parseFloat(messageData.size);
+                    console.log(datum);
                     cb(null, datum);
                 }
             };
