@@ -23,10 +23,11 @@
             var n = 0;
             ticker = setInterval(function() {
                 var datum = {
-                    price: rand(200 + n++, 210 + n++),
+                    price: rand(200 + n, 210 + n),
                     volume: rand(1, 10),
                     date: new Date()
                 };
+                n++;
                 callback(null, datum);
             }, 1500);
         }
