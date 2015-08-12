@@ -16,7 +16,15 @@
                 cb(err, basket);
             });
         }
-
+        
+        ohlc.liveFeed = function(x) {
+            if (!arguments.length) {
+                return liveFeed;
+            }
+            liveFeed = x;
+            return ohlc;
+        };
+        
         ohlc.period = function(x) {
             if (!arguments.length) {
                 return period;
