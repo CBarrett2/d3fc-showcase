@@ -16,7 +16,7 @@
                 cb(err, basket);
             });
         }
-        
+
         ohlc.liveFeed = function(x) {
             if (!arguments.length) {
                 return liveFeed;
@@ -24,7 +24,7 @@
             liveFeed = x;
             return ohlc;
         };
-        
+
         ohlc.period = function(x) {
             if (!arguments.length) {
                 return period;
@@ -37,7 +37,7 @@
 
         function updateBasket(basket, datum) {
             if (basket == null) {
-                basket = createNewBasket(datum, datum.date);
+                return createNewBasket(datum, datum.date);
             }
             var latestTime = datum.date.getTime();
             var startTime = basket.date.getTime();
