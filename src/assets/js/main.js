@@ -94,7 +94,7 @@
                 currentSeries = candlestick;
                 break;
         }
-        multi.series([gridlines, ma, currentSeries, closeAxisAnnotation]);
+        multi.series([gridlines, movingAverageLine, currentSeries, closeAxisAnnotation]);
         render();
     }
 
@@ -117,7 +117,7 @@
             if (!currData.length) {
                 currData = [latestBasket];
                 resetToLive();
-                hideOrShowChartsAndSetLoadingText(false);
+                toggleVisibility(false);
             } else if (currData[currData.length - 1].date.getTime() !== latestBasket.date.getTime()) {
                 currData.push(latestBasket);
             } else {
@@ -126,11 +126,13 @@
             render();
         } else if (event.type === 'open') {
             // On successful open
-            hideOrShowChartsAndSetLoadingText(true, 'Connected, waiting for data...');
+            toggleVisibility(true);
+            setLoadingText('Connected, waiting for data...');
         } else if (event.type === 'close' && event.code === 1000) {
             // No need for a message on successful close
         } else {
-            hideOrShowChartsAndSetLoadingText(true, 'Error loading data from coinbase websocket: ' +
+            toggleVisibility(true);
+            setLoadingText('Error loading data from coinbase websocket: ' +
                 event.type + ' ' + event.code);
         }
     }
@@ -154,19 +156,49 @@
         d3.select('#product-span').style('visibility', visibility);
     }
 
+    function setLoadingText(text) {
+        d3.select('#loading-text')
+            .text(text);
+    }
+
+    function toggleVisibility(hidden) {
+        var visibility = (hidden === false) ? 'visible' : 'hidden';
+        var textVisibility = (hidden === false) ? 'hidden' : 'visible';
+
+        var type = d3.select('#type-selection').property('value');
+
+        if (type === 'live') {
+            svgRSI.style('visibility', 'hidden');
+            svgNav.style('visibility', 'hidden');
+        } else {
+            svgRSI.style('visibility', visibility);
+            svgNav.style('visibility', visibility);
+        }
+
+        svgMain.style('visibility', visibility);
+        d3.select('#loading-text')
+            .style('visibility', textVisibility);
+
+    }
+
+    function connectToLive() {
+        currData = [];
+        setLoadingText('Connecting to websocket...');
+        toggleVisibility(true);
+        render();
+        ohlcConverter(liveCallback);
+    }
+
     d3.select('#type-selection')
         .on('change', function() {
             var type = d3.select(this).property('value');
             if (type === 'live') {
                 toggleLiveFeedUI(true);
-                currData = [];
-                hideOrShowChartsAndSetLoadingText(true, 'Connecting to websocket...');
-                render();
-                ohlcConverter(liveCallback);
+                connectToLive();
             } else if (type === 'fake') {
                 toggleLiveFeedUI(false);
                 ohlcConverter.close();
-                hideOrShowChartsAndSetLoadingText(false);
+                toggleVisibility(false);
                 currData = fc.data.random.financial()(250);
                 // No need for loading text as this will be instant
                 resetToLive();
@@ -178,20 +210,14 @@
         .on('change', function() {
             var period = parseInt(d3.select(this).property('value'));
             ohlcConverter.period(period);
-            currData = [];
-            hideOrShowChartsAndSetLoadingText(true, 'Connecting to websocket...');
-            render();
-            ohlcConverter(liveCallback);
+            connectToLive();
         });
 
     d3.select('#product-selection')
         .on('change', function() {
             var product = d3.select(this).property('value');
             ohlcConverter.product(product);
-            currData = [];
-            hideOrShowChartsAndSetLoadingText(true, 'Connecting to websocket...');
-            render();
-            ohlcConverter(liveCallback);
+            connectToLive();
         });
 
     // Create main chart and set how much data is initially viewed
@@ -206,7 +232,7 @@
     var movingAverage = fc.indicator.algorithm.movingAverage();
 
     // Create a line that renders the result
-    var ma = fc.series.line()
+    var movingAverageLine = fc.series.line()
         .decorate(function(selection) {
             selection.enter()
                 .classed('ma', true);
@@ -225,7 +251,7 @@
         });
 
     var multi = fc.series.multi()
-        .series([gridlines, ma, currentSeries, closeAxisAnnotation])
+        .series([gridlines, movingAverageLine, currentSeries, closeAxisAnnotation])
         .key(function(series, index) {
             switch (series) {
                 case line:
@@ -352,14 +378,13 @@
 
     // Create navigation chart
     var navTimeSeries = fc.chart.linearTimeSeries()
-        .xDomain(fc.util.extent(data, 'date'))
-        .yDomain(yExtent)
+        .xDomain(fc.util.extent(currData, 'date'))
         .yTicks(0);
 
     area = fc.series.area()
         .yValue(function(d) { return d.open; });
 
-    line.yValue(function(d) { return d.open; })
+    line.yValue(function(d) { return d.open; });
 
     var brush = d3.svg.brush();
     var navMulti = fc.series.multi().series([area, line, brush]);
@@ -408,37 +433,7 @@
         selection.call(navTimeSeries);
     };
 
-    function hideOrShowChartsAndSetLoadingText(hidden, text) {
-        function setLoadingText(text) {
-            if (text) {
-                d3.select('#loading-text')
-                    .text(text);
-            }
-        }
 
-        function toggleVisibility(hidden) {
-            var visibility = (hidden === false) ? 'visible' : 'hidden';
-            var textVisibility = (hidden === false) ? 'hidden' : 'visible';
-
-            var type = d3.select('#type-selection').property('value');
-
-            if (type === 'live') {
-                svgRSI.style('visibility', 'hidden');
-                svgNav.style('visibility', 'hidden');
-            } else {
-                svgRSI.style('visibility', visibility);
-                svgNav.style('visibility', visibility);
-            }
-
-            svgMain.style('visibility', visibility);
-            d3.select('#loading-text')
-                .style('visibility', textVisibility);
-
-        }
-
-        toggleVisibility(hidden);
-        setLoadingText(text);
-    }
 
     function render() {
         if (!currData.length) {
