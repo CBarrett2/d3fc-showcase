@@ -11,9 +11,9 @@
         return visibleData;
     }
 
-    function padExtent(extent) {
+    function padExtent(extent, period) {
         // Adds a buffer of current period to either side of data
-        var period = ohlcConverter.period();
+
 
         extent[0] = d3.time.second.offset(new Date(extent[0]), -period);
         extent[1] = d3.time.second.offset(new Date(extent[1]), +period);
@@ -138,7 +138,7 @@
             // On successful open
             hideOrShowChartsAndSetLoadingText(true, 'Connected, waiting for data...');
         } else if (event.type === 'close' && event.code === 1000) {
-            // I don't think there's any need for a message on successful close
+            // No need for a message on successful close
         } else {
             hideOrShowChartsAndSetLoadingText(true, 'Error loading data from coinbase websocket: ' +
                 event.type + ' ' + event.code);
@@ -154,25 +154,28 @@
         var navAspect = parseInt(svgNav.attr('height'), 10) / parseInt(svgNav.attr('width'), 10);
         var standardDateDisplay = [currData[Math.floor((1 - navAspect * goldenRatio) * currData.length)].date,
                 currData[currData.length - 1].date];
-        standardDateDisplay = padExtent(standardDateDisplay);
+        standardDateDisplay = padExtent(standardDateDisplay, ohlcConverter.period());
         timeSeries.xDomain(standardDateDisplay);
         render();
+    }
+
+    function toggleLiveFeedUI(visible) {
+        var visibility = (visible === true) ? 'visible' : 'hidden';
+        d3.select('#period-span').style('visibility', visibility);
+        d3.select('#product-span').style('visibility', visibility);
     }
 
     d3.select('#type-selection')
         .on('change', function() {
             var type = d3.select(this).property('value');
             if (type === 'live') {
-                d3.select('#period-span').style('visibility', 'visible');
-                d3.select('#product-span').style('visibility', 'visible');
+                toggleLiveFeedUI(true);
                 currData = [];
                 hideOrShowChartsAndSetLoadingText(true, 'Connecting to websocket...');
                 render();
                 ohlcConverter(liveCallback);
             } else if (type === 'fake') {
-                // maybe generate from scratch
-                d3.select('#period-span').style('visibility', 'hidden');
-                d3.select('#product-span').style('visibility', 'hidden');
+                toggleLiveFeedUI(false);
                 ohlcConverter.close();
                 hideOrShowChartsAndSetLoadingText(false);
                 currData = fc.data.random.financial()(250);
@@ -195,15 +198,12 @@
     d3.select('#product-selection')
         .on('change', function() {
             var product = d3.select(this).property('value');
-            // Would be nice to base this selection off the products list
             ohlcConverter.product(product);
             currData = [];
             hideOrShowChartsAndSetLoadingText(true, 'Connecting to websocket...');
             render();
             ohlcConverter(liveCallback);
         });
-
-
 
     // Create main chart and set how much data is initially viewed
     var timeSeries = fc.chart.linearTimeSeries()
@@ -276,7 +276,7 @@
             var tx = zoom.translate()[0];
             var ty = zoom.translate()[1];
 
-            var xExtent = padExtent(fc.util.extent(data, ['date']));
+            var xExtent = padExtent(fc.util.extent(data, ['date']), ohlcConverter.period());
             var min = scale(xExtent[0]);
             var max = scale(xExtent[1]);
 
@@ -378,7 +378,7 @@
     var navChart = function(selection) {
         var data = selection.datum();
 
-        var xExtent = padExtent(fc.util.extent(data, 'date'));
+        var xExtent = padExtent(fc.util.extent(data, 'date'), ohlcConverter.period());
         var yExtent = fc.util.extent(getVisibleData(data, fc.util.extent(data, 'date')), ['low', 'high']);
         navTimeSeries.xDomain(xExtent)
             .yDomain(yExtent);
