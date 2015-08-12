@@ -2,29 +2,6 @@
     'use strict';
 
     describe('sc.data.feed.coinbase.ohlcWebSocketAdaptor', function() {
-        function testFeed() {
-            var data = fc.data.random.financial()(10);
-            var index = 0;
-            var callback;
-            function feed(cb) {
-                callback = cb;
-            }
-
-            feed.sendDatum = function() {
-                callback(null, data[index]);
-                index++;
-            };
-
-            feed.sendEvent = function(x) {
-                // Not sure if this should be less prescriptive about the type of event sent?
-                // Although this is probably the expected interface?
-                var event = {type: x};
-                callback(event, null);
-            };
-
-            return feed;
-        }
-
         var ohlc;
 
         beforeEach(function() {
