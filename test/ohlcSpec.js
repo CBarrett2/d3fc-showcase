@@ -48,9 +48,27 @@
             feed.sendEvent('open');
             expect(eventType).toEqual('open');
         });
-
+        
         it('should pass the latest basket of data collected to callback' +
             'whenever a new datum is pushed by the live feed', function() {
+            var feed = testFeed();
+            ohlc.liveFeed(feed);
+            var called = false;
+            ohlc(function(event, basket) {
+                called = true;
+            });
+
+            var datum = {
+                price: 10,
+                volume: 1,
+                date: new Date(1000)
+            };
+            
+            feed.sendDatum(datum);
+            expect(called).toBeTrue();
+        });
+
+        it('should initialize a new basket when the first datum is pushed by live feed', function() {
             var feed = testFeed();
             ohlc.liveFeed(feed);
             var currBasket = {};
