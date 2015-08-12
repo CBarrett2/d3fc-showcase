@@ -21,7 +21,8 @@
     <div class="container" id="chart-example">
 
       <div class="row" id="head-row">
-        <div class="col-md-12">
+        <div class="col-md-5">
+
           <div id="series-buttons" class="btn-group" data-toggle="buttons">
             <label class="btn btn-default active" id="candlestick-button">
               <input type="radio" name="options" value="candlestick" checked> Candlestick
@@ -46,12 +47,10 @@
             </div>
           </div>
         </div>
-      </div>
       
-      <div class="row" id="selection-row"> 
-        <h2> Data Source </h2>
+      
         <div class="col-md-2">
-          Type
+          
           <select id="type-selection" selected="type" class="form-control">
             <option value="fake">Data generator</option>
             <option value="live">Live data</option>
@@ -59,7 +58,6 @@
         </div>
         <div class="col-md-2">
           <span id="period-span">
-            Period
             <select id="period-selection" class="form-control">
               <option value="43200">12hr</option>
               <option value="3600">1hr</option>
@@ -69,7 +67,6 @@
         </div>
         <div class="col-md-2">
           <span id="product-span">
-            Product
             <select id="product-selection" class="form-control">
               <option value="BTC-USD">BTC/USD</option>
               <option value="BTC-EUR">BTC/EUR</option>
