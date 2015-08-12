@@ -112,18 +112,22 @@
     // Default to generated data
     var currData = fc.data.random.financial()(250);
 
+    function newBasketReceived(basket) {
+        if (!currData.length) {
+            currData = [basket];
+            resetToLive();
+            toggleVisibility(false);
+        } else if (currData[currData.length - 1].date.getTime() !== basket.date.getTime()) {
+            currData.push(basket);
+        } else {
+            currData[currData.length - 1] = basket;
+        }
+        render();
+    }
+
     function liveCallback(event, latestBasket) {
         if (!event && latestBasket) {
-            if (!currData.length) {
-                currData = [latestBasket];
-                resetToLive();
-                toggleVisibility(false);
-            } else if (currData[currData.length - 1].date.getTime() !== latestBasket.date.getTime()) {
-                currData.push(latestBasket);
-            } else {
-                currData[currData.length - 1] = latestBasket;
-            }
-            render();
+            newBasketReceived(latestBasket);
         } else if (event.type === 'open') {
             // On successful open
             toggleVisibility(true);
