@@ -11,16 +11,6 @@
         return visibleData;
     }
 
-    function padExtent(extent, period) {
-        // Adds a buffer of current period to either side of data
-
-
-        extent[0] = d3.time.second.offset(new Date(extent[0]), -period);
-        extent[1] = d3.time.second.offset(new Date(extent[1]), +period);
-
-        return extent;
-    }
-
     // Set SVGs & column padding
     var container = d3.select('#chart-example');
 
@@ -154,7 +144,6 @@
         var navAspect = parseInt(svgNav.attr('height'), 10) / parseInt(svgNav.attr('width'), 10);
         var standardDateDisplay = [currData[Math.floor((1 - navAspect * goldenRatio) * currData.length)].date,
                 currData[currData.length - 1].date];
-        standardDateDisplay = padExtent(standardDateDisplay, ohlcConverter.period());
         timeSeries.xDomain(standardDateDisplay);
         render();
     }
@@ -276,7 +265,7 @@
             var tx = zoom.translate()[0];
             var ty = zoom.translate()[1];
 
-            var xExtent = padExtent(fc.util.extent(data, ['date']), ohlcConverter.period());
+            var xExtent = fc.util.extent(data, ['date']);
             var min = scale(xExtent[0]);
             var max = scale(xExtent[1]);
 
@@ -370,7 +359,7 @@
     area = fc.series.area()
         .yValue(function(d) { return d.open; });
 
-    line.yValue(function(d) { return d.open; });
+    line.yValue(function(d) { return d.open; })
 
     var brush = d3.svg.brush();
     var navMulti = fc.series.multi().series([area, line, brush]);
@@ -378,7 +367,7 @@
     var navChart = function(selection) {
         var data = selection.datum();
 
-        var xExtent = padExtent(fc.util.extent(data, 'date'), ohlcConverter.period());
+        var xExtent = fc.util.extent(data, 'date');
         var yExtent = fc.util.extent(getVisibleData(data, fc.util.extent(data, 'date')), ['low', 'high']);
         navTimeSeries.xDomain(xExtent)
             .yDomain(yExtent);
