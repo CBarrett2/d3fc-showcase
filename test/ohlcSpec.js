@@ -138,7 +138,7 @@
             expect(currBasket).toEqual(expectedBasket);
         });
 
-        it('should create a new basket when the first datum is pushed after the', function() {
+        it('should create a new basket when the first datum is pushed after the period has expired', function() {
             var feed = testFeed();
             ohlc.liveFeed(feed);
             ohlc.period(60 * 60 * 24);
