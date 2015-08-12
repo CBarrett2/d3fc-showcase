@@ -13,7 +13,7 @@
 
     function padExtent(extent) {
         // Adds a buffer of current period to either side of data
-        var period = ohlc.period();
+        var period = ohlcConverter.period();
 
         extent[0] = d3.time.second.offset(new Date(extent[0]), -period);
         extent[1] = d3.time.second.offset(new Date(extent[1]), +period);
@@ -81,13 +81,6 @@
 
     var currentSeries = candlestick;
 
-    var data = fc.data.random.financial()(250);
-
-    // Using golden ratio to make initial display area rectangle into the golden rectangle
-    var goldenRatio = 1.618;
-
-    var standardDateDisplay;
-
     calculateDimensions();
 
     function changeSeries(seriesTypeString) {
@@ -125,7 +118,7 @@
             changeSeries(seriesTypeString);
         });
 
-    var ohlc = sc.data.feed.coinbase.ohlcWebSocketAdaptor();
+    var ohlcConverter = sc.data.feed.coinbase.ohlcWebSocketAdaptor();
     // Default to generated data
     var currData = fc.data.random.financial()(250);
 
@@ -175,12 +168,12 @@
                 currData = [];
                 hideOrShowChartsAndSetLoadingText(true, 'Connecting to websocket...');
                 render();
-                ohlc(liveCallback);
+                ohlcConverter(liveCallback);
             } else if (type === 'fake') {
                 // maybe generate from scratch
                 d3.select('#period-span').style('visibility', 'hidden');
                 d3.select('#product-span').style('visibility', 'hidden');
-                ohlc.close();
+                ohlcConverter.close();
                 hideOrShowChartsAndSetLoadingText(false);
                 currData = fc.data.random.financial()(250);
                 // No need for loading text as this will be instant
@@ -192,22 +185,22 @@
     d3.select('#period-selection')
         .on('change', function() {
             var period = parseInt(d3.select(this).property('value'));
-            ohlc.period(period);
+            ohlcConverter.period(period);
             currData = [];
             hideOrShowChartsAndSetLoadingText(true, 'Connecting to websocket...');
             render();
-            ohlc(liveCallback);
+            ohlcConverter(liveCallback);
         });
 
     d3.select('#product-selection')
         .on('change', function() {
             var product = d3.select(this).property('value');
             // Would be nice to base this selection off the products list
-            ohlc.product(product);
+            ohlcConverter.product(product);
             currData = [];
             hideOrShowChartsAndSetLoadingText(true, 'Connecting to websocket...');
             render();
-            ohlc(liveCallback);
+            ohlcConverter(liveCallback);
         });
 
 
@@ -220,16 +213,6 @@
         .yTicks(5)
         .xTicks(0);
 
-    var startPriceLine = fc.annotation.line()
-        .orient('horizontal')
-        .value(function(d) { return d.open; })
-        .label(function(d) { return 'OPEN'; });
-
-    var endPriceLine = fc.annotation.line()
-        .orient('horizontal')
-        .value(function(d) { return d.close; })
-        .label(function(d) { return 'CLOSE'; });
-
     // Create and apply the Moving Average
     var movingAverage = fc.indicator.algorithm.movingAverage();
 
@@ -241,27 +224,19 @@
         })
         .yValue(function(d) { return d.movingAverage; });
 
-    function render() {
-        svgMain.datum(data)
-            .call(mainChart);
+    var priceFormat = d3.format('.2f');
 
-        svgRSI.datum(data)
-            .call(rsiChart);
-
-        svgNav.datum(data)
-            .call(navChart);
-    }
+    var closeAxisAnnotation = fc.annotation.line()
+        .orient('horizontal')
+        .value(function(d) { return d.close; })
+        .label(function(d) { return priceFormat(d.close); })
+        .decorate(function(sel) {
+            positionCloseAxis(sel);
+            sel.enter().classed('close', true);
+        });
 
     var multi = fc.series.multi()
         .series([gridlines, ma, currentSeries, closeAxisAnnotation])
-        .mapping(function(series) {
-            switch (series) {
-                case closeAxisAnnotation:
-                    return [data[data.length - 1]];
-                default:
-                    return data;
-            }
-        })
         .key(function(series, index) {
             switch (series) {
                 case line:
@@ -270,6 +245,31 @@
                     return series;
             }
         });
+
+    function calculateCloseAxisTagPath(width, height) {
+        var h2 = height / 2;
+        return [
+            [0, 0],
+            [h2, -h2],
+            [width, -h2],
+            [width, h2],
+            [h2, h2],
+            [0, 0]
+        ];
+    }
+
+    function positionCloseAxis(sel) {
+        sel.enter()
+            .select('.right-handle')
+            .insert('path', ':first-child')
+            .attr('transform', 'translate(' + -40 + ', 0)')
+            .attr('d', d3.svg.area()(calculateCloseAxisTagPath(40, 14)));
+
+        sel.select('text')
+            .attr('transform', 'translate(' + (-2) + ', ' + 2 + ')')
+            .attr('x', 0)
+            .attr('y', 0);
+    }
 
     function zoomCall(zoom, data, scale) {
         return function() {
@@ -307,9 +307,7 @@
 
         multi.mapping(function(series) {
             switch (series) {
-                case startPriceLine:
-                    return [data[0]];
-                case endPriceLine:
+                case closeAxisAnnotation:
                     return [data[data.length - 1]];
                 default:
                     return data;
@@ -369,7 +367,7 @@
         .yDomain(yExtent)
         .yTicks(0);
 
-    var area = fc.series.area()
+    area = fc.series.area()
         .yValue(function(d) { return d.open; });
 
     line.yValue(function(d) { return d.open; });
