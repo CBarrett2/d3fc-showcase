@@ -33,7 +33,6 @@
         }
 
         fakeWebSocket.close = function() {
-            // Alternative to saving the callback, we could redefine this function inside fakeWebSocket(cb)
             if (ticker) {
                 clearInterval(ticker);
                 var event = {
