@@ -24,11 +24,15 @@
                     onReceivedBasket();
                 }
 
-                if (event.type === 'open') {
-                    onOpen();
-                } else if (event.type === 'close' && event.code === 1000) {
-                    onClose();
-                } else if (event) { onError(event); }
+                if (event) {
+                    if (event.type === 'open') {
+                        onOpen();
+                    } else if (event.type === 'close' && event.code === 1000) {
+                        onClose();
+                    } else if (event) {
+                        onError(event);
+                    }
+                }
 
             });
             return dataInterface;
