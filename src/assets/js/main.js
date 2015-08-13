@@ -98,51 +98,30 @@
         render();
     }
 
-    d3.select('#series-buttons')
-        .selectAll('.btn')
-        .on('click', function() {
-            var seriesTypeString = d3.select(this)
-                .select('input')
-                .node()
-                .value;
-            changeSeries(seriesTypeString);
-        });
-
-    var ohlcConverter = sc.data.feed.coinbase.ohlcWebSocketAdaptor();
+    var dataInterface = sc.data.dataInterface();
     // Default to generated data
-    var currData = fc.data.random.financial()(250);
+    var fakeData = fc.data.random.financial()(250);
+    var getCurrentData = function() { return fakeData; };
 
-    function newBasketReceived(basket) {
-        if (!currData.length) {
-            currData = [basket];
-            resetToLive();
-            toggleVisibility(false);
-        } else if (currData[currData.length - 1].date.getTime() !== basket.date.getTime()) {
-            currData.push(basket);
-        } else {
-            currData[currData.length - 1] = basket;
-        }
+    dataInterface.onReceivedBasket(function() {
+        toggleVisibility(false);
         render();
-    }
+    });
 
-    function liveCallback(event, latestBasket) {
-        if (!event && latestBasket) {
-            newBasketReceived(latestBasket);
-        } else if (event.type === 'open') {
-            // On successful open
-            toggleVisibility(true);
-            setLoadingText('Connected, waiting for data...');
-        } else if (event.type === 'close' && event.code === 1000) {
-            // No need for a message on successful close
-        } else {
-            toggleVisibility(true);
-            setLoadingText('Error loading data from coinbase websocket: ' +
-                event.type + ' ' + event.code);
-        }
-    }
+    dataInterface.onOpen(function() {
+        toggleVisibility(true);
+        setLoadingText('Connected, waiting for data...');
+    });
+
+    dataInterface.onError(function() {
+        toggleVisibility(true);
+        setLoadingText('Error loading data from coinbase websocket: ' +
+            event.type + ' ' + event.code);
+    });
 
     function resetToLive() {
         // Using golden ratio to make initial display area rectangle into the golden rectangle
+        var currData = getCurrentData();
         if (!currData.length) {
             return;
         }
@@ -186,12 +165,22 @@
     }
 
     function connectToLive() {
-        currData = [];
+        getCurrentData = function() { return dataInterface.getData(); };
         setLoadingText('Connecting to websocket...');
         toggleVisibility(true);
         render();
-        ohlcConverter(liveCallback);
+        dataInterface.goLive();
     }
+
+    d3.select('#series-buttons')
+        .selectAll('.btn')
+        .on('click', function() {
+            var seriesTypeString = d3.select(this)
+                .select('input')
+                .node()
+                .value;
+            changeSeries(seriesTypeString);
+        });
 
     d3.select('#type-selection')
         .on('change', function() {
@@ -201,9 +190,10 @@
                 connectToLive();
             } else if (type === 'fake') {
                 toggleLiveFeedUI(false);
-                ohlcConverter.close();
+                dataInterface.close();
                 toggleVisibility(false);
-                currData = fc.data.random.financial()(250);
+                fakeData = fc.data.random.financial()(250);
+                getCurrentData = function() { return fakeData; };
                 // No need for loading text as this will be instant
                 resetToLive();
                 render();
@@ -213,14 +203,14 @@
     d3.select('#period-selection')
         .on('change', function() {
             var period = parseInt(d3.select(this).property('value'));
-            ohlcConverter.period(period);
+            dataInterface.period(period);
             connectToLive();
         });
 
     d3.select('#product-selection')
         .on('change', function() {
             var product = d3.select(this).property('value');
-            ohlcConverter.product(product);
+            dataInterface.product(product);
             connectToLive();
         });
 
@@ -382,7 +372,7 @@
 
     // Create navigation chart
     var navTimeSeries = fc.chart.linearTimeSeries()
-        .xDomain(fc.util.extent(currData, 'date'))
+        .xDomain(fc.util.extent(getCurrentData(), 'date'))
         .yTicks(0);
 
     area = fc.series.area()
@@ -440,6 +430,7 @@
 
 
     function render() {
+        var currData = getCurrentData();
         if (!currData.length) {
             return;
         }
