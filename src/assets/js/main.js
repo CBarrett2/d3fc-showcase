@@ -56,11 +56,6 @@
             .attr('height', rsiHeightRatio * targetHeight / totalHeightRatio);
 
         svgNav.attr('width', targetWidth);
-
-        var navAspect = navHeight / targetWidth;
-
-        standardDateDisplay = [data[Math.floor((1 - navAspect * goldenRatio) * data.length)].date,
-            data[data.length - 1].date];
     }
 
     var candlestick = fc.series.candlestick();
