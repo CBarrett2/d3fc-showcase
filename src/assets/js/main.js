@@ -92,7 +92,7 @@
 
     // Set Reset button event
     function resetToLive() {
-        standardDateDisplay = sc.util.findPaddedExtent(standardDateDisplay, 60 * 60 * 24);
+        standardDateDisplay = sc.util.paddedExtent(standardDateDisplay, 60 * 60 * 24);
         timeSeries.xDomain(standardDateDisplay);
         render();
     }
@@ -190,7 +190,7 @@
             var tx = zoom.translate()[0];
             var ty = zoom.translate()[1];
 
-            var xExtent = sc.util.findPaddedExtent(fc.util.extent(data, ['date']), 60 * 60 * 24);
+            var xExtent = sc.util.paddedExtent(fc.util.extent(data, ['date']), 60 * 60 * 24);
             var min = scale(xExtent[0]);
             var max = scale(xExtent[1]);
 
@@ -263,7 +263,7 @@
 
     // Create navigation chart
     var yExtent = fc.util.extent(sc.util.filterDataInDateRange(data, fc.util.extent(data, 'date')), ['low', 'high']);
-    var xExtent = sc.util.findPaddedExtent(fc.util.extent(data, 'date'), 60 * 60 * 24);
+    var xExtent = sc.util.paddedExtent(fc.util.extent(data, 'date'), 60 * 60 * 24);
     var navTimeSeries = fc.chart.linearTimeSeries()
         .xDomain(xExtent)
         .yDomain(yExtent)
