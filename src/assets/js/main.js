@@ -55,22 +55,30 @@
 
     calculateDimensions();
 
+    var bufferPeriod = 60 * 60 * 24;
+
     function changeSeries(seriesTypeString) {
         switch (seriesTypeString) {
             case 'ohlc':
                 currentSeries = ohlc;
+                bufferPeriod = 60 * 60 * 24;
                 break;
             case 'candlestick':
                 currentSeries = candlestick;
+                bufferPeriod = 60 * 60 * 24;
                 break;
             case 'line':
                 currentSeries = line;
+                bufferPeriod = 0;
+
                 break;
             case 'point':
                 currentSeries = point;
+                bufferPeriod = 60 * 60 * 24;
                 break;
             case 'area':
                 currentSeries = area;
+                bufferPeriod = 0;
                 break;
             default:
                 currentSeries = candlestick;
@@ -92,8 +100,8 @@
 
     // Set Reset button event
     function resetToLive() {
-        standardDateDisplay = sc.util.paddedExtent(standardDateDisplay, 60 * 60 * 24);
-        timeSeries.xDomain(standardDateDisplay);
+        var extent = sc.util.paddedExtent(standardDateDisplay, bufferPeriod);
+        timeSeries.xDomain(extent);
         render();
     }
 
@@ -101,7 +109,6 @@
 
     // Create main chart and set how much data is initially viewed
     var timeSeries = fc.chart.linearTimeSeries()
-        .xDomain(standardDateDisplay)
         .xTicks(6);
 
     var gridlines = fc.annotation.gridline()
@@ -185,12 +192,14 @@
             }
         });
 
+
+
     function zoomCall(zoom, data, scale) {
         return function() {
             var tx = zoom.translate()[0];
             var ty = zoom.translate()[1];
 
-            var xExtent = sc.util.paddedExtent(fc.util.extent(data, ['date']), 60 * 60 * 24);
+            var xExtent = sc.util.paddedExtent(fc.util.extent(data, ['date']), bufferPeriod);
             var min = scale(xExtent[0]);
             var max = scale(xExtent[1]);
 
@@ -237,6 +246,7 @@
             .on('zoom', zoomCall(zoom, data, timeSeries.xScale()));
 
         selection.call(zoom);
+
     };
 
     // Create RSI chart
@@ -263,7 +273,7 @@
 
     // Create navigation chart
     var yExtent = fc.util.extent(sc.util.filterDataInDateRange(data, fc.util.extent(data, 'date')), ['low', 'high']);
-    var xExtent = sc.util.paddedExtent(fc.util.extent(data, 'date'), 60 * 60 * 24);
+    var xExtent = fc.util.extent(data, 'date');
     var navTimeSeries = fc.chart.linearTimeSeries()
         .xDomain(xExtent)
         .yDomain(yExtent)
@@ -282,8 +292,18 @@
 
         brush.on('brush', function() {
                 if (brush.extent()[0][0] - brush.extent()[1][0] !== 0) {
+                    var extent = fc.util.extent(data, ['date']);
+                    var earliest = brush.extent()[0][0];
+                    var latest = brush.extent()[1][0];
+                    /*if (brush.extent()[1][0].getTime() === extent[1].getTime()) {
+                        earliest = new Date(earliest.getTime() - bufferPeriod);
+                    }
+                    if (brush.extent()[0][0].getTime() === extent[0].getTime()) {
+                        latest = new Date(latest.getTime() + bufferPeriod);
+                    }*/
+
                     // Control the main chart's time series domain
-                    timeSeries.xDomain([brush.extent()[0][0], brush.extent()[1][0]]);
+                    timeSeries.xDomain([earliest, latest]);
                     render();
                 }
             });
@@ -322,6 +342,7 @@
 
     d3.select(window).on('resize', resize);
 
+    resetToLive();
     resize();
 
 })(d3, fc, sc);
