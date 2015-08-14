@@ -30,8 +30,7 @@
             .attr('height', mainHeightRatio * targetHeight / totalHeightRatio);
         svgRSI.attr('width', targetWidth)
             .attr('height', rsiHeightRatio * targetHeight / totalHeightRatio);
-        svgNav.attr('width', targetWidth)
-            .attr('height', navHeightRatio * targetHeight / totalHeightRatio);
+        svgNav.attr('width', targetWidth);
     }
 
     var candlestick = fc.series.candlestick();
@@ -368,7 +367,8 @@
         var data = selection.datum();
 
         var xExtent = fc.util.extent(data, 'date');
-        var yExtent = fc.util.extent(getVisibleData(data, fc.util.extent(data, 'date')), ['low', 'high']);
+        var yExtent = fc.util.extent(sc.util.filterDataInDateRange(data,
+            fc.util.extent(data, 'date')), ['low', 'high']);
         navTimeSeries.xDomain(xExtent)
             .yDomain(yExtent);
         area.y0Value(yExtent[0]);
@@ -407,8 +407,6 @@
         navTimeSeries.plotArea(navMulti);
         selection.call(navTimeSeries);
     };
-
-
 
     function render() {
         if (!currData.length) {
