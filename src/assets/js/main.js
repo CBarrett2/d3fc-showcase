@@ -74,7 +74,7 @@
     var currDate = new Date();
     var startDate = d3.time.minute.offset(currDate, -199);
 
-    var coinbase = fc.data.feed.coinbase()
+    var historicFeed = sc.data.feed.coinbase.historicFeed()
         .granularity(60)
         .start(startDate)
         .end(currDate);
@@ -105,7 +105,7 @@
 
     function historicCallback(err, newData) {
         if (!err) {
-            data = newData.reverse();
+            data = newData;
             resetToLive();
             ohlcConverter(liveCallback);
             render();
@@ -124,12 +124,13 @@
             if (type === 'live') {
                 data = [];
                 toggleLiveFeedUI(true);
-                coinbase(historicCallback);
+                historicFeed(historicCallback);
                 render();
 
             } else if (type === 'fake') {
                 toggleLiveFeedUI(false);
                 ohlcConverter.close();
+                historicFeed.invalidateCallback();
                 data = fc.data.random.financial()(250);
                 resetToLive();
                 render();
@@ -280,8 +281,6 @@
     // Create navigation chart
     var yExtent = fc.util.extent(sc.util.filterDataInDateRange(data, fc.util.extent(data, 'date')), ['low', 'high']);
     var navTimeSeries = fc.chart.linearTimeSeries()
-        .xDomain(fc.util.extent(data, 'date'))
-        .yDomain(yExtent)
         .yTicks(0);
 
     area.yValue(function(d) { return d.open; })
@@ -294,6 +293,13 @@
 
     var navChart = function(selection) {
         data = selection.datum();
+
+        var yExtent = fc.util.extent(sc.util.filterDataInDateRange(data, fc.util.extent(data, 'date')),
+            ['low', 'high']);
+        navTimeSeries.xDomain(fc.util.extent(data, 'date'))
+            .yDomain(yExtent);
+
+        area.y0Value(yExtent[0]);
 
         brush.on('brush', function() {
                 if (brush.extent()[0][0] - brush.extent()[1][0] !== 0) {
