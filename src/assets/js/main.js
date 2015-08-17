@@ -23,11 +23,6 @@
 
     sc.util.calculateDimensions(container);
 
-    var navAspect = parseInt(svgNav.style('height'), 10) / svgNav.attr('width');
-
-    var standardDateDisplay = [data[Math.floor((1 - navAspect * goldenRatio) * data.length)].date,
-        data[data.length - 1].date];
-
     function changeSeries(seriesTypeString) {
         switch (seriesTypeString) {
             case 'ohlc':
@@ -65,15 +60,86 @@
 
     // Set Reset button event
     function resetToLive() {
+        if (!data.length) { return; }
+        var navAspect = parseInt(svgNav.style('height'), 10) / svgNav.attr('width');
+        var standardDateDisplay = [data[Math.floor((1 - navAspect * goldenRatio) * data.length)].date,
+            data[data.length - 1].date];
         timeSeries.xDomain(standardDateDisplay);
         render();
     }
+
+    var ohlcConverter = sc.data.feed.coinbase.ohlcWebSocketAdaptor()
+        .period(60);
+
+    var currDate = new Date();
+    var startDate = d3.time.minute.offset(currDate, -199);
+
+    var coinbase = fc.data.feed.coinbase()
+        .granularity(60)
+        .start(startDate)
+        .end(currDate);
+
+    function newBasketReceived(basket) {
+        if (data[data.length - 1].date.getTime() !== basket.date.getTime()) {
+            data.push(basket);
+        } else {
+            data[data.length - 1] = basket;
+        }
+        render();
+    }
+
+    function liveCallback(event, latestBasket) {
+        if (!event && latestBasket) {
+            console.log(latestBasket);
+            newBasketReceived(latestBasket);
+        } else if (event.type === 'open') {
+            // On successful open
+            console.log('Connected, waiting for data...');
+        } else if (event.type === 'close' && event.code === 1000) {
+            // No need for a message on successful close
+        } else {
+            console.log('Error loading data from coinbase websocket: ' +
+                event.type + ' ' + event.code);
+        }
+    }
+
+    function historicCallback(err, newData) {
+        if (!err) {
+            data = newData.reverse();
+            resetToLive();
+            ohlcConverter(liveCallback);
+            render();
+        } else { console.log('Error getting historic data: ' + err); }
+    }
+
+    function toggleLiveFeedUI(visible) {
+        var visibility = (visible === true) ? 'visible' : 'hidden';
+        d3.select('#period-span').style('visibility', visibility);
+        d3.select('#product-span').style('visibility', visibility);
+    }
+
+    d3.select('#type-selection')
+        .on('change', function() {
+            var type = d3.select(this).property('value');
+            if (type === 'live') {
+                data = [];
+                toggleLiveFeedUI(true);
+                coinbase(historicCallback);
+                render();
+
+            } else if (type === 'fake') {
+                toggleLiveFeedUI(false);
+                ohlcConverter.close();
+                data = fc.data.random.financial()(250);
+                resetToLive();
+                render();
+            }
+        });
 
     container.select('#reset-button').on('click', resetToLive);
 
     // Create main chart and set how much data is initially viewed
     var timeSeries = fc.chart.linearTimeSeries()
-        .xDomain(standardDateDisplay)
         .xTicks(6);
 
     var gridlines = fc.annotation.gridline()
@@ -128,6 +194,10 @@
         .yValue(function(d) { return d.movingAverage; });
 
     function render() {
+        if (!data.length) {
+            return;
+        }
+
         svgMain.datum(data)
             .call(mainChart);
 
@@ -170,6 +240,7 @@
 
         // Scale y axis
         var yExtent = fc.util.extent(sc.util.filterDataInDateRange(data, timeSeries.xDomain()), ['low', 'high']);
+
         timeSeries.yDomain(yExtent);
 
         // Redraw
@@ -261,17 +332,11 @@
 
     function resize() {
         sc.util.calculateDimensions(container);
-
-        var navAspect = parseInt(svgNav.style('height'), 10) / svgNav.attr('width');
-
-        standardDateDisplay = [data[Math.floor((1 - navAspect * goldenRatio) * data.length)].date,
-            data[data.length - 1].date];
-
         render();
     }
 
     d3.select(window).on('resize', resize);
 
     resize();
-
+    resetToLive();
 })(d3, fc, sc);
