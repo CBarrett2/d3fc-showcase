@@ -7,8 +7,8 @@
         var period = 60 * 60 * 24;
         var liveFeed = sc.data.feed.coinbase.webSocket();
 
-        function ohlc(cb) {
-            var basket = null;
+        function ohlc(cb, initialBasket) {
+            var basket = initialBasket || null;
             liveFeed(function(err, datum) {
                 if (datum) {
                     basket = updateBasket(basket, datum);
