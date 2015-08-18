@@ -14,6 +14,7 @@
                 coinbase: {}
             }
         },
+        series: {},
         util: {}
     };
 })();

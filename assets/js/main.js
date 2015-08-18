@@ -2,13 +2,13 @@
     'use strict';
 
     // Set SVGs & column padding
-    var container = d3.select('#chart-example');
+    var container = d3.select('#app-container');
 
     var svgMain = container.select('svg.primary');
     var svgRSI = container.select('svg.rsi');
     var svgNav = container.select('svg.nav');
 
-    var candlestick = fc.series.candlestick();
+    var candlestick = sc.series.optimisedCandlestick();
     var ohlc = fc.series.ohlc();
     var point = fc.series.point();
     var line = fc.series.line();
