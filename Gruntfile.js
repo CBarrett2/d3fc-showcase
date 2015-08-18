@@ -253,8 +253,7 @@ module.exports = function(grunt) {
             },
             test: {
                 src: ['src/assets/js/sc.js',
-                    'src/assets/js/webSocket.js',
-                    'src/assets/js/ohlc.js'],
+                      'src/assets/js/data/feed/coinbase/ohlcWebSocketAdaptor.js'],
                 options: {
                     keepRunner: true
                 }
@@ -275,12 +274,12 @@ module.exports = function(grunt) {
     grunt.registerTask('check:warnOnly', ['jshint:warnOnly', 'jscs:warnOnly']);
     grunt.registerTask('check', ['check:failOnError']);
 
-    grunt.registerTask('build', ['check', 'clean', 'copy', 'less:production']);
+    grunt.registerTask('build', ['check', 'clean', 'copy', 'less:production', 'test']);
     grunt.registerTask('build:development', ['check', 'clean', 'copy', 'less:development']);
     grunt.registerTask('build:warnOnly', ['check:warnOnly', 'clean', 'copy', 'less:development']);
-    
+
     grunt.registerTask('test', ['jasmine:test']);
-    
+
     grunt.registerTask('build:android', ['build', 'cordovacli:buildAndroid']);
     grunt.registerTask('build:ios', ['build', 'cordovacli:buildIos']);
     grunt.registerTask('mobile:platforms', [

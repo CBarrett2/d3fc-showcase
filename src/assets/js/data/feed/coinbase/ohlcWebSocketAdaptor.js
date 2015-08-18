@@ -1,11 +1,11 @@
 (function(sc) {
     'use strict';
-    sc.data.feed.coinbase.ohlcWebSocketAdaptor = function() {
+    sc.data.feed.coinbase.ohlcWebSocketAdaptor = function(feed) {
         // Expects transactions with a price, volume and date and organizes them into candles of given periods
         // Re-call OHLC whenever you want to start collecting for a new period/product
         // In seconds
         var period = 60 * 60 * 24;
-        var liveFeed = sc.data.feed.coinbase.webSocket();
+        var liveFeed = feed || sc.data.feed.coinbase.webSocket();
 
         function ohlc(cb) {
             var basket = null;
@@ -16,14 +16,6 @@
                 cb(err, basket);
             });
         }
-
-        ohlc.liveFeed = function(x) {
-            if (!arguments.length) {
-                return liveFeed;
-            }
-            liveFeed = x;
-            return ohlc;
-        };
 
         ohlc.period = function(x) {
             if (!arguments.length) {

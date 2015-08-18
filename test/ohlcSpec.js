@@ -20,59 +20,29 @@
             return feed;
         }
 
-        var ohlc;
-
         beforeEach(function() {
-            ohlc = sc.data.feed.coinbase.ohlcWebSocketAdaptor();
+            this.testFeed = testFeed();
+            this.ohlc = sc.data.feed.coinbase.ohlcWebSocketAdaptor(this.testFeed);
         });
 
         it('should have a working getter/setter for period', function() {
-            ohlc.period(60 * 60 * 24);
-            expect(ohlc.period()).toEqual(60 * 60 * 24);
+            this.ohlc.period(60 * 60 * 24);
+            expect(this.ohlc.period()).toEqual(60 * 60 * 24);
         });
 
-        it('should have working getter/setter for liveFeed', function() {
-            var feed = testFeed();
-            ohlc.liveFeed(feed);
-            expect(ohlc.liveFeed()).toEqual(feed);
-        });
-
-        it('should pass events to callback when one is triggered in the live feed', function() {
-            var feed = testFeed();
-            ohlc.liveFeed(feed);
-            var eventType = '';
-            ohlc(function(event, basket) {
+        it('when an event is triggered in the live feed, it should be passed to the callback', function() {
+            var eventType;
+            this.ohlc(function(event, basket) {
                 eventType = event.type;
             });
 
-            feed.sendEvent('open');
+            this.testFeed.sendEvent('open');
             expect(eventType).toEqual('open');
         });
 
-        it('should pass the latest basket of data collected to callback' +
-            'whenever a new datum is pushed by the live feed', function() {
-            var feed = testFeed();
-            ohlc.liveFeed(feed);
-            var called = false;
-            ohlc(function(event, basket) {
-                called = true;
-            });
-
-            var datum = {
-                price: 10,
-                volume: 1,
-                date: new Date(1000)
-            };
-
-            feed.sendDatum(datum);
-            expect(called).toBeTruthy();
-        });
-
         it('should initialize a new basket when the first datum is pushed by live feed', function() {
-            var feed = testFeed();
-            ohlc.liveFeed(feed);
-            var currBasket = {};
-            ohlc(function(event, basket) {
+            var currBasket;
+            this.ohlc(function(event, basket) {
                 currBasket = basket;
             });
 
@@ -91,17 +61,15 @@
                 volume: 1
             };
 
-            feed.sendDatum(datum);
+            this.testFeed.sendDatum(datum);
             expect(currBasket).toEqual(expectedBasket);
         });
 
         it('should update the basket returned to callback as new data are pushed', function() {
-            var feed = testFeed();
-            ohlc.liveFeed(feed);
-            ohlc.period(60 * 60 * 24);
+            this.ohlc.period(60 * 60 * 24);
             var currBasket = {};
 
-            ohlc(function(event, basket) {
+            this.ohlc(function(event, basket) {
                 currBasket = basket;
             });
 
@@ -132,19 +100,17 @@
                 volume: 4
             };
 
-            feed.sendDatum(datum1);
-            feed.sendDatum(datum2);
-            feed.sendDatum(datum3);
+            this.testFeed.sendDatum(datum1);
+            this.testFeed.sendDatum(datum2);
+            this.testFeed.sendDatum(datum3);
             expect(currBasket).toEqual(expectedBasket);
         });
 
         it('should create a new basket when the first datum is pushed after the period has expired', function() {
-            var feed = testFeed();
-            ohlc.liveFeed(feed);
-            ohlc.period(60 * 60 * 24);
+            this.ohlc.period(60 * 60 * 24);
             var currBasket = {};
 
-            ohlc(function(event, basket) {
+            this.ohlc(function(event, basket) {
                 currBasket = basket;
             });
 
@@ -170,8 +136,8 @@
                 volume: 1
             };
 
-            feed.sendDatum(datum1);
-            feed.sendDatum(datum2);
+            this.testFeed.sendDatum(datum1);
+            this.testFeed.sendDatum(datum2);
             expect(currBasket).toEqual(expectedBasket);
         });
     });
