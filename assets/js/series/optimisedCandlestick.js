@@ -3,14 +3,16 @@
     sc.series.optimisedCandlestick = function() {
         var xScale = fc.scale.dateTime();
         var yScale = d3.scale.linear();
+        var barWidth = fc.util.fractionalBarWidth(0.75);
+        var xValue = function(d, i) { return d.date; };
+        var xValueScaled = function(d, i) { return xScale(xValue(d, i)); };
 
         var candlestick = fc.svg.candlestick()
             .x(function(d) { return xScale(d.date); })
             .open(function(d) { return yScale(d.open); })
             .high(function(d) { return yScale(d.high); })
             .low(function(d) { return yScale(d.low); })
-            .close(function(d) { return yScale(d.close); })
-            .width(5);
+            .close(function(d) { return yScale(d.close); });
 
         var upDataJoin = fc.util.dataJoin()
             .selector('path.up')
@@ -24,6 +26,8 @@
 
         var optimisedCandlestick = function(selection) {
             selection.each(function(data) {
+                candlestick.width(barWidth(data.map(xValueScaled)));
+
                 var upData = data.filter(function(d) { return d.open < d.close; });
                 var downData = data.filter(function(d) { return d.open >= d.close; });
 
