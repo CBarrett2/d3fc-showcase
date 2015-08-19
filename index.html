@@ -52,6 +52,13 @@
             </label>
           </div>
 
+          <div class="col-md-2">
+            <select id="type-selection" selected="type" class="form-control">
+              <option value="generated">Data generator</option>
+              <option value="bitcoin">Bitcoin data</option>
+            </select>
+          </div>
+          
           <div class="pull-right">
             <div id="reset-button">
               <button class="btn btn-default" type="button">Reset</button>
@@ -85,6 +92,7 @@
     <script src="assets/js/util/filterDataInDateRange.js"></script>
     <script src="assets/js/data/feed/coinbase/webSocket.js"></script>
     <script src="assets/js/data/feed/coinbase/ohlcWebSocketAdaptor.js"></script>
+    <script src="assets/js/data/feed/coinbase/historicFeed.js"></script>
     <script src="assets/js/chart/primaryChart.js"></script>
     <script src="assets/js/chart/rsiChart.js"></script>
     <script src="assets/js/chart/navChart.js"></script>

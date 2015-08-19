@@ -36,6 +36,11 @@
             .yTicks(5)
             .xTicks(0);
 
+        // Create and apply the Moving Average
+        var movingAverage = fc.indicator.algorithm.movingAverage();
+
+        var bollingerAlgorithm = fc.indicator.algorithm.bollingerBands();
+
         var priceFormat = d3.format('.2f');
 
         var closeAxisAnnotation = fc.annotation.line()
@@ -57,20 +62,24 @@
             });
 
         function primaryChart(selection) {
-            var dataModel = selection.datum();
-            timeSeries.xDomain(dataModel.viewDomain);
+            var data = selection.datum().data;
+            var viewDomain = selection.datum().viewDomain;
+            timeSeries.xDomain(viewDomain);
+
+            movingAverage(data);
+            bollingerAlgorithm(data);
 
             multi.mapping(function(series) {
                 switch (series) {
                     case closeAxisAnnotation:
-                        return [dataModel.data[dataModel.data.length - 1]];
+                        return [data[data.length - 1]];
                     default:
-                        return dataModel.visibleData;
+                        return data;
                 }
             });
 
             // Scale y axis
-            var yExtent = fc.util.extent(dataModel.visibleData, ['low', 'high']);
+            var yExtent = fc.util.extent(sc.util.filterDataInDateRange(data, timeSeries.xDomain()), ['low', 'high']);
             timeSeries.yDomain(yExtent);
 
             // Redraw
@@ -81,7 +90,7 @@
             var zoom = d3.behavior.zoom();
             zoom.x(timeSeries.xScale())
                 .on('zoom', function() {
-                    sc.util.zoomControl(zoom, selection, dataModel.totalXExtent, timeSeries.xScale());
+                    sc.util.zoomControl(zoom, selection, data, timeSeries.xScale());
                     dispatch.viewChange(timeSeries.xDomain());
                 });
 

@@ -19,9 +19,7 @@
 
     var dataModel = {
         data: fc.data.random.financial()(250),
-        viewDomain: [],
-        totalXExtent: [],
-        visibleData: []
+        viewDomain: []
     };
 
     var movingAverage = fc.series.line()
@@ -123,21 +121,40 @@
         var standardDateDisplay = [data[Math.floor((1 - navAspect * goldenRatio) * data.length)].date,
             data[data.length - 1].date];
         onViewChanged(standardDateDisplay);
-        render();
     }
+
+    var currDate = new Date();
+    var startDate = d3.time.minute.offset(currDate, -200);
+
+    var historicFeed = sc.data.feed.coinbase.historicFeed()
+        .granularity(60)
+        .start(startDate)
+        .end(currDate);
+
+    function historicCallback(err, newData) {
+        if (!err) {
+            dataModel.data = newData;
+            resetToLive();
+            render();
+        } else { console.log('Error getting historic data: ' + err); }
+    }
+
+    d3.select('#type-selection')
+        .on('change', function() {
+            var type = d3.select(this).property('value');
+            if (type === 'bitcoin') {
+                historicFeed(historicCallback);
+            } else if (type === 'generated') {
+                historicFeed.invalidateCallback();
+                dataModel.data = fc.data.random.financial()(250);
+                resetToLive();
+                render();
+            }
+        });
 
     container.select('#reset-button').on('click', resetToLive);
 
-    function updateData() {
-        dataModel.totalXExtent = fc.util.extent(dataModel.data, 'date');
-        fc.indicator.algorithm.relativeStrengthIndex()(dataModel.data);
-        fc.indicator.algorithm.bollingerBands()(dataModel.data);
-        fc.indicator.algorithm.movingAverage()(dataModel.data);
-    }
-
     function render() {
-        dataModel.visibleData = sc.util.filterDataInDateRange(dataModel.data, dataModel.viewDomain);
-
         svgMain.datum(dataModel)
             .call(primaryChart);
 
@@ -155,8 +172,6 @@
 
     d3.select(window).on('resize', resize);
 
-    updateData();
     resetToLive();
     resize();
-
 })(d3, fc, sc);
