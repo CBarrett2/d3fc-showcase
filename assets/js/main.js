@@ -18,7 +18,7 @@
     var currentSeries;
 
     var dataModel = {
-        data: fc.data.random.financial()(250),
+        data: fc.data.random.financial()(5),
         viewDomain: []
     };
 
@@ -126,19 +126,15 @@
 
     container.select('#reset-button').on('click', resetToLive);
 
-    function updateData() {
-        svgMain.datum(dataModel.data)
-            .call(primaryChart.updateData);
-        svgRSI.datum(dataModel.data)
-            .call(rsiChart.updateData);
-        svgNav.datum(dataModel.data)
-            .call(navChart.updateData);
-    }
-
     function render() {
-        svgMain.call(primaryChart, dataModel.viewDomain);
-        svgRSI.call(rsiChart, dataModel.viewDomain);
-        svgNav.call(navChart, dataModel.viewDomain);
+        svgMain.datum(dataModel)
+            .call(primaryChart);
+
+        svgRSI.datum(dataModel)
+            .call(rsiChart);
+
+        svgNav.datum(dataModel)
+            .call(navChart);
     }
 
     function resize() {
@@ -148,7 +144,6 @@
 
     d3.select(window).on('resize', resize);
 
-    updateData();
     resetToLive();
     resize();
 

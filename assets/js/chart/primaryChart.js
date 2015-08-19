@@ -61,13 +61,28 @@
                 return series;
             });
 
-        function primaryChart(selection, viewDomain) {
-            var data = selection.datum();
+        function primaryChart(selection) {
+            var data = selection.datum().data;
+            var viewDomain = selection.datum().viewDomain;
             timeSeries.xDomain(viewDomain);
 
+            movingAverage(data);
+            bollingerAlgorithm(data);
+
+            multi.mapping(function(series) {
+                switch (series) {
+                    case closeAxisAnnotation:
+                        return [data[data.length - 1]];
+                    default:
+                        return data;
+                }
+            });
+
+            // Scale y axis
             var yExtent = fc.util.extent(sc.util.filterDataInDateRange(data, timeSeries.xDomain()), ['low', 'high']);
             timeSeries.yDomain(yExtent);
 
+            // Redraw
             timeSeries.plotArea(multi);
             selection.call(timeSeries);
 
@@ -81,22 +96,6 @@
 
             selection.call(zoom);
         }
-
-        primaryChart.updateData = function(selection) {
-            var data = selection.datum();
-            movingAverage(data);
-            bollingerAlgorithm(data);
-            multi.mapping(function(series) {
-                switch (series) {
-                    case closeAxisAnnotation:
-                        return [data[data.length - 1]];
-                    default:
-                        return data;
-                }
-            });
-
-            return primaryChart;
-        };
 
         d3.rebind(primaryChart, dispatch, 'on');
 
