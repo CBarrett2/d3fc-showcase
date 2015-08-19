@@ -19,7 +19,9 @@
 
     var dataModel = {
         data: fc.data.random.financial()(250),
-        viewDomain: []
+        viewDomain: [],
+        totalXExtent: [],
+        visibleData: []
     };
 
     var movingAverage = fc.series.line()
@@ -126,25 +128,24 @@
 
     container.select('#reset-button').on('click', resetToLive);
 
+    function updateData() {
+        dataModel.totalXExtent = fc.util.extent(dataModel.data, 'date');
+        fc.indicator.algorithm.relativeStrengthIndex()(dataModel.data);
+        fc.indicator.algorithm.bollingerBands()(dataModel.data);
+        fc.indicator.algorithm.movingAverage()(dataModel.data);
+    }
+
     function render() {
+        dataModel.visibleData = sc.util.filterDataInDateRange(dataModel.data, dataModel.viewDomain);
 
-        var visData = sc.util.filterDataInDateRange(dataModel.data, dataModel.viewDomain);
-        var visDataModel = {
-            data: visData,
-            viewDomain: dataModel.viewDomain
-        };
-
-        var totalXExtent = fc.util.extent(dataModel.data, 'date');
-
-        svgMain.datum(visDataModel)
-            .call(primaryChart, totalXExtent);
+        svgMain.datum(dataModel)
+            .call(primaryChart);
 
         svgRSI.datum(dataModel)
-            .call(rsiChart, totalXExtent);
+            .call(rsiChart);
 
-        // could trim the data down here to eg 100 points, sampled from true data
         svgNav.datum(dataModel)
-            .call(navChart, totalXExtent);
+            .call(navChart);
     }
 
     function resize() {
@@ -154,6 +155,7 @@
 
     d3.select(window).on('resize', resize);
 
+    updateData();
     resetToLive();
     resize();
 

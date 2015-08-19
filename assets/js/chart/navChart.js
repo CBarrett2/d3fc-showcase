@@ -19,17 +19,16 @@
 
         var viewScale = fc.scale.dateTime();
 
-        function navChart(selection, totalXExtent) {
-            var data = selection.datum().data;
-            var viewDomain = selection.datum().viewDomain;
+        function navChart(selection) {
+            var dataModel = selection.datum();
 
-            viewScale.domain(viewDomain)
+            viewScale.domain(dataModel.viewDomain)
                 .range([0, selection.attr('width')]);
 
-            var yExtent = fc.util.extent(sc.util.filterDataInDateRange(data,
-                fc.util.extent(data, 'date')), ['low', 'high']);
+            var yExtent = fc.util.extent(sc.util.filterDataInDateRange(dataModel.data,
+                fc.util.extent(dataModel.data, 'date')), ['low', 'high']);
 
-            navTimeSeries.xDomain(totalXExtent)
+            navTimeSeries.xDomain(dataModel.totalXExtent)
                 .yDomain(yExtent);
 
             brush.on('brush', function() {
@@ -47,12 +46,11 @@
                         zoom.translate([0, 0]);
                     } else {
                         // Usual behavior
-                        sc.util.zoomControl(zoom, selection, data, viewScale);
+                        sc.util.zoomControl(zoom, selection, dataModel.totalXExtent, viewScale);
                         dispatch.viewChange(viewScale.domain());
                     }
                 });
             selection.call(zoom);
-
 
             navMulti.mapping(function(series) {
                 if (series === brush) {
@@ -61,7 +59,7 @@
                         [viewScale.domain()[1], navTimeSeries.yDomain()[1]]
                     ]);
                 }
-                return data;
+                return dataModel.data;
             });
 
             navTimeSeries.plotArea(navMulti);

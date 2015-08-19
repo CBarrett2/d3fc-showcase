@@ -7,31 +7,30 @@
         var rsiScale = d3.scale.linear()
             .domain([0, 100]);
 
-        var rsiAlgorithm = fc.indicator.algorithm.relativeStrengthIndex();
-
         var rsi = fc.indicator.renderer.relativeStrengthIndex()
             .yScale(rsiScale);
 
-        function rsiChart(selection, totalXExtent) {
-            var data = selection.datum().data;
-            var viewDomain = selection.datum().viewDomain;
+        function rsiChart(selection) {
+            var dataModel = selection.datum();
 
             rsi.xScale()
-                .domain(viewDomain)
+                .domain(dataModel.viewDomain)
                 .range([0, selection.attr('width')]);
             rsi.yScale().range([parseInt(selection.style('height'), 10), 0]);
 
-            rsiAlgorithm(data);
+            /*rsi.mapping(function(series) {
+                return dataModel.visibleData;
+            });*/
 
             var zoom = d3.behavior.zoom();
             zoom.x(rsi.xScale())
                 .on('zoom', function() {
-                    sc.util.zoomControl(zoom, selection, totalXExtent, rsi.xScale());
+                    sc.util.zoomControl(zoom, selection, dataModel.totalXExtent, rsi.xScale());
                     dispatch.viewChange(rsi.xScale().domain());
                 });
 
             selection.call(zoom);
-            selection.datum(data)
+            selection.datum(dataModel.visibleData)
                 .call(rsi);
         }
 
