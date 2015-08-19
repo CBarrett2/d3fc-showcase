@@ -25,11 +25,6 @@
             this.ohlc = sc.data.feed.coinbase.ohlcWebSocketAdaptor(this.testFeed);
         });
 
-        it('should have a working getter/setter for period', function() {
-            this.ohlc.period(60 * 60 * 24);
-            expect(this.ohlc.period()).toEqual(60 * 60 * 24);
-        });
-
         it('when an event is triggered in the live feed, it should be passed to the callback', function() {
             var eventType;
             this.ohlc(function(event, basket) {
@@ -66,12 +61,10 @@
         });
 
         it('should update the basket returned to callback as new data are pushed', function() {
-            this.ohlc.period(60 * 60 * 24);
-            var currBasket = {};
-
+            var currBasket;
             this.ohlc(function(event, basket) {
                 currBasket = basket;
-            });
+            }, 60 * 60 * 24);
 
             var datum1 = {
                 price: 10,
@@ -108,12 +101,11 @@
 
         it('should create a new basket when the first datum is pushed after the period has expired ' +
            'which has a time of oldTime + period', function() {
-            this.ohlc.period(60 * 60 * 24);
-            var currBasket = {};
+            var currBasket;
 
             this.ohlc(function(event, basket) {
                 currBasket = basket;
-            });
+            }, 60 * 60 * 24);
 
             var datum1 = {
                 price: 10,

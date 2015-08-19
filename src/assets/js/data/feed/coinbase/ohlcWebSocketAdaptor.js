@@ -4,30 +4,21 @@
         // Expects transactions with a price, volume and date and organizes them into candles of given periods
         // Re-call OHLC whenever you want to start collecting for a new period/product
         // In seconds
-        var period = 60 * 60 * 24;
         var liveFeed = feed || sc.data.feed.coinbase.webSocket();
 
-        function ohlc(cb) {
+        function ohlc(cb, period) {
             var basket = null;
             liveFeed(function(err, datum) {
                 if (datum) {
-                    basket = updateBasket(basket, datum);
+                    basket = updateBasket(basket, datum, period);
                 }
                 cb(err, basket);
             });
         }
 
-        ohlc.period = function(x) {
-            if (!arguments.length) {
-                return period;
-            }
-            period = x;
-            return ohlc;
-        };
-
         d3.rebind(ohlc, liveFeed, 'product', 'messageType', 'close');
 
-        function updateBasket(basket, datum) {
+        function updateBasket(basket, datum, period) {
             if (basket == null) {
                 return createNewBasket(datum, datum.date);
             }
