@@ -8,7 +8,7 @@
     var svgRSI = container.select('svg.rsi');
     var svgNav = container.select('svg.nav');
 
-    var candlestick = sc.series.optimisedCandlestick();
+    var candlestick = fc.series.candlestick();
     var ohlc = fc.series.ohlc();
     var point = fc.series.point();
     var line = fc.series.line();
@@ -126,15 +126,19 @@
 
     container.select('#reset-button').on('click', resetToLive);
 
+    function updateData() {
+        svgMain.datum(dataModel.data)
+            .call(primaryChart.updateData);
+        svgRSI.datum(dataModel.data)
+            .call(rsiChart.updateData);
+        svgNav.datum(dataModel.data)
+            .call(navChart.updateData);
+    }
+
     function render() {
-        svgMain.datum(dataModel)
-            .call(primaryChart);
-
-        svgRSI.datum(dataModel)
-            .call(rsiChart);
-
-        svgNav.datum(dataModel)
-            .call(navChart);
+        svgMain.call(primaryChart, dataModel.viewDomain);
+        svgRSI.call(rsiChart, dataModel.viewDomain);
+        svgNav.call(navChart, dataModel.viewDomain);
     }
 
     function resize() {
@@ -144,6 +148,7 @@
 
     d3.select(window).on('resize', resize);
 
+    updateData();
     resetToLive();
     resize();
 

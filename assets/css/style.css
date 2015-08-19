@@ -6956,14 +6956,3 @@ path.area {
   fill-opacity: 0.125;
   shape-rendering: crispEdges;
 }
-.candlestick > path {
-  stroke: #000;
-}
-path.down {
-  stroke: #000;
-  fill: #c60;
-}
-path.up {
-  stroke: #000;
-  fill: #6c0;
-}
