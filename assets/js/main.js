@@ -18,7 +18,7 @@
     var currentSeries;
 
     var dataModel = {
-        data: fc.data.random.financial()(5),
+        data: fc.data.random.financial()(250),
         viewDomain: []
     };
 
@@ -127,14 +127,24 @@
     container.select('#reset-button').on('click', resetToLive);
 
     function render() {
-        svgMain.datum(dataModel)
-            .call(primaryChart);
+
+        var visData = sc.util.filterDataInDateRange(dataModel.data, dataModel.viewDomain);
+        var visDataModel = {
+            data: visData,
+            viewDomain: dataModel.viewDomain
+        };
+
+        var totalXExtent = fc.util.extent(dataModel.data, 'date');
+
+        svgMain.datum(visDataModel)
+            .call(primaryChart, totalXExtent);
 
         svgRSI.datum(dataModel)
-            .call(rsiChart);
+            .call(rsiChart, totalXExtent);
 
+        // could trim the data down here to eg 100 points, sampled from true data
         svgNav.datum(dataModel)
-            .call(navChart);
+            .call(navChart, totalXExtent);
     }
 
     function resize() {

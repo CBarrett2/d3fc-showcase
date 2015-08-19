@@ -61,7 +61,7 @@
                 return series;
             });
 
-        function primaryChart(selection) {
+        function primaryChart(selection, totalXExtent) {
             var data = selection.datum().data;
             var viewDomain = selection.datum().viewDomain;
             timeSeries.xDomain(viewDomain);
@@ -79,7 +79,7 @@
             });
 
             // Scale y axis
-            var yExtent = fc.util.extent(sc.util.filterDataInDateRange(data, timeSeries.xDomain()), ['low', 'high']);
+            var yExtent = fc.util.extent(data, ['low', 'high']);
             timeSeries.yDomain(yExtent);
 
             // Redraw
@@ -90,7 +90,7 @@
             var zoom = d3.behavior.zoom();
             zoom.x(timeSeries.xScale())
                 .on('zoom', function() {
-                    sc.util.zoomControl(zoom, selection, data, timeSeries.xScale());
+                    sc.util.zoomControl(zoom, selection, totalXExtent, timeSeries.xScale());
                     dispatch.viewChange(timeSeries.xDomain());
                 });
 

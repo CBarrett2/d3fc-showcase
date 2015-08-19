@@ -19,7 +19,7 @@
 
         var viewScale = fc.scale.dateTime();
 
-        function navChart(selection) {
+        function navChart(selection, totalXExtent) {
             var data = selection.datum().data;
             var viewDomain = selection.datum().viewDomain;
 
@@ -29,7 +29,7 @@
             var yExtent = fc.util.extent(sc.util.filterDataInDateRange(data,
                 fc.util.extent(data, 'date')), ['low', 'high']);
 
-            navTimeSeries.xDomain(fc.util.extent(data, 'date'))
+            navTimeSeries.xDomain(totalXExtent)
                 .yDomain(yExtent);
 
             brush.on('brush', function() {

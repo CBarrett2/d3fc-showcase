@@ -12,7 +12,7 @@
         var rsi = fc.indicator.renderer.relativeStrengthIndex()
             .yScale(rsiScale);
 
-        function rsiChart(selection) {
+        function rsiChart(selection, totalXExtent) {
             var data = selection.datum().data;
             var viewDomain = selection.datum().viewDomain;
 
@@ -26,7 +26,7 @@
             var zoom = d3.behavior.zoom();
             zoom.x(rsi.xScale())
                 .on('zoom', function() {
-                    sc.util.zoomControl(zoom, selection, data, rsi.xScale());
+                    sc.util.zoomControl(zoom, selection, totalXExtent, rsi.xScale());
                     dispatch.viewChange(rsi.xScale().domain());
                 });
 
