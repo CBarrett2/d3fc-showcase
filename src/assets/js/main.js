@@ -88,11 +88,8 @@
         onViewChanged(standardDateDisplay);
     }
 
-    
-
     var historicFeed = sc.data.feed.coinbase.historicFeed()
-        .granularity(60)
-        
+        .granularity(60);
 
     var ohlcConverter = sc.data.feed.coinbase.ohlcWebSocketAdaptor()
         .period(60);
