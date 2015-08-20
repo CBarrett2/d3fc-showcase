@@ -101,10 +101,10 @@
         resetToLive();
         render();
     }
-        
+
     function historicCallback(err, newData) {
         if (!err) {
-            updateDataAndResetChart(newData)
+            updateDataAndResetChart(newData);
         } else { console.log('Error getting historic data: ' + err); }
     }
 
@@ -116,7 +116,7 @@
             } else if (type === 'generated') {
                 historicFeed.invalidateCallback();
                 var newData = fc.data.random.financial()(250);
-                updateDataAndResetChart(newData)
+                updateDataAndResetChart(newData);
             }
         });
 
