@@ -96,7 +96,7 @@
         .start(startDate)
         .end(currDate);
 
-    var callbackGenerator = sc.data.feed.coinbase.invalidator();
+    var callbackGenerator = sc.data.feed.coinbase.callbackInvalidator();
 
     function updateDataAndResetChart(newData) {
         dataModel.data = newData;
