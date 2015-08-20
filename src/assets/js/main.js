@@ -88,13 +88,11 @@
         onViewChanged(standardDateDisplay);
     }
 
-    var currDate = new Date();
-    var startDate = d3.time.minute.offset(currDate, -200);
+    
 
     var historicFeed = sc.data.feed.coinbase.historicFeed()
         .granularity(60)
-        .start(startDate)
-        .end(currDate);
+        
 
     var ohlcConverter = sc.data.feed.coinbase.ohlcWebSocketAdaptor()
         .period(60);
@@ -135,6 +133,10 @@
         .on('change', function() {
             var type = d3.select(this).property('value');
             if (type === 'live') {
+                var currDate = new Date();
+                var startDate = d3.time.minute.offset(currDate, -200);
+                historicFeed.start(startDate)
+                .end(currDate);
                 historicFeed(historicCallback);
             } else if (type === 'generated') {
                 ohlcConverter.close();
