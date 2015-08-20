@@ -133,5 +133,40 @@
             this.testFeed.sendDatum(datum2);
             expect(currBasket).toEqual(expectedBasket);
         });
+
+        it('should place the newly created basket at the start of the nearest new period', function() {
+            var currBasket;
+
+            this.ohlc(function(event, basket) {
+                currBasket = basket;
+            }, 60 * 60 * 24);
+
+            var datum1 = {
+                price: 10,
+                volume: 1,
+                date: new Date(1000)
+            };
+
+            var datum2 = {
+                price: 15,
+                volume: 1,
+                date: new Date(1001 + 2 * (60 * 60 * 24 * 1000))
+            };
+
+            var expectedBasket = {
+                // New basket is created at oldTime + period, not at the time of the first datum sent
+                date: new Date(1000 + 2 * (60 * 60 * 24 * 1000)),
+                open: 15,
+                high: 15,
+                low: 15,
+                close: 15,
+                volume: 1
+            };
+
+            this.testFeed.sendDatum(datum1);
+            this.testFeed.sendDatum(datum2);
+            expect(currBasket).toEqual(expectedBasket);
+        });
+
     });
 })(d3, fc, sc);
