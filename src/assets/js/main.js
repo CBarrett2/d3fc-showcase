@@ -96,11 +96,15 @@
         .start(startDate)
         .end(currDate);
 
+    function updateDataAndResetChart(newData) {
+        dataModel.data = newData;
+        resetToLive();
+        render();
+    }
+        
     function historicCallback(err, newData) {
         if (!err) {
-            dataModel.data = newData;
-            resetToLive();
-            render();
+            updateDataAndResetChart(newData)
         } else { console.log('Error getting historic data: ' + err); }
     }
 
@@ -111,9 +115,8 @@
                 historicFeed(historicCallback);
             } else if (type === 'generated') {
                 historicFeed.invalidateCallback();
-                dataModel.data = fc.data.random.financial()(250);
-                resetToLive();
-                render();
+                var newData = fc.data.random.financial()(250);
+                updateDataAndResetChart(newData)
             }
         });
 
