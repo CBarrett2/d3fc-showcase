@@ -35,7 +35,7 @@
             var startTime = basket.date.getTime();
             var msPeriod = period * 1000;
             if (latestTime > startTime + msPeriod) {
-                var timeIntoCurrentPeriod = (latestTime - startTime) % period;
+                var timeIntoCurrentPeriod = (latestTime - startTime) % msPeriod;
                 var newTime = latestTime - timeIntoCurrentPeriod;
                 basket = createNewBasket(datum, new Date(newTime));
             } else {
