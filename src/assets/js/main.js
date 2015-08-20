@@ -104,7 +104,7 @@
 
     function historicCallback(err, newData) {
         if (!err) {
-            updateDataAndResetChart(newData);
+            updateDataAndResetChart(newData.reverse());
         } else { console.log('Error getting historic data: ' + err); }
     }
 
