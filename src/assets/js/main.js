@@ -32,13 +32,12 @@
         });
 
     function onViewChanged(domain) {
-        if (domain[0].getTime() < dataModel.data[0].date.getTime() ||
-            domain[1].getTime() > dataModel.data[dataModel.data.length - 1].date.getTime()) {
-            resetToLive();
-        } else {
+        if (domain[0].getTime() >= dataModel.data[0].date.getTime() &&
+            domain[1].getTime() <= dataModel.data[dataModel.data.length - 1].date.getTime()) {
             dataModel.viewDomain = [domain[0], domain[1]];
+            render();
         }
-        render();
+
     }
 
     primaryChart.on('viewChange', onViewChanged);
