@@ -32,7 +32,12 @@
         });
 
     function onViewChanged(domain) {
-        dataModel.viewDomain = [domain[0], domain[1]];
+        if (domain[0].getTime() < dataModel.data[0].date.getTime() ||
+            domain[1].getTime() > dataModel.data[dataModel.data.length - 1].date.getTime()) {
+            resetToLive();
+        } else {
+            dataModel.viewDomain = [domain[0], domain[1]];
+        }
         render();
     }
 
