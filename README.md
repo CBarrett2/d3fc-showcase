@@ -58,6 +58,13 @@ grunt deploy
 
 The project is then accessible at the obvious address (USERNAME.github.io/REPO-NAME).
 
+### Testing
+
+To run unit tests in the /test folder, use: 
+```
+grunt test
+```
+
 ## License
 
 This project is licensed under the [MIT License](http://opensource.org/licenses/MIT).

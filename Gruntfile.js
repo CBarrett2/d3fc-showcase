@@ -87,6 +87,12 @@ module.exports = function(grunt) {
                     expand: true
                 },
                 {
+                    cwd: 'node_modules/jquery/dist',
+                    src: ['jquery.min.js'],
+                    dest: 'dist/assets/js',
+                    expand: true
+                },
+                {
                     cwd: 'node_modules/d3fc/node_modules/d3/',
                     src: ['d3.js'],
                     dest: 'dist/assets/js',
@@ -114,12 +120,6 @@ module.exports = function(grunt) {
                     cwd: 'node_modules/bootstrap/dist/fonts/',
                     src: ['**'],
                     dest: 'dist/assets/fonts',
-                    expand: true
-                },
-                {
-                    cwd: 'node_modules/jquery/dist',
-                    src: ['jquery.min.js'],
-                    dest: 'dist/assets/js',
                     expand: true
                 }]
             },
@@ -241,8 +241,24 @@ module.exports = function(grunt) {
                     'dist/assets/css/style.css': 'src/assets/styles/style.less'
                 }
             }
-        }
+        },
 
+        jasmine: {
+            options: {
+                specs: '<%= meta.testJsFiles %>',
+                vendor: ['node_modules/jquery/dist/jquery.min.js',
+                        'node_modules/d3fc/node_modules/d3/d3.js',
+                        'node_modules/d3fc/node_modules/css-layout/src/Layout.js',
+                        'node_modules/d3fc/dist/d3fc.js']
+            },
+            test: {
+                src: ['src/assets/js/sc.js',
+                      'src/assets/js/data/feed/coinbase/ohlcWebSocketAdaptor.js'],
+                options: {
+                    keepRunner: true
+                }
+            }
+        }
     });
 
     require('load-grunt-tasks')(grunt);
@@ -258,9 +274,11 @@ module.exports = function(grunt) {
     grunt.registerTask('check:warnOnly', ['jshint:warnOnly', 'jscs:warnOnly']);
     grunt.registerTask('check', ['check:failOnError']);
 
-    grunt.registerTask('build', ['check', 'clean', 'less:production', 'copy']);
+    grunt.registerTask('build', ['check', 'clean', 'less:production', 'copy', 'test']);
     grunt.registerTask('build:development', ['check', 'clean', 'less:development', 'copy']);
     grunt.registerTask('build:warnOnly', ['check:warnOnly', 'clean', 'less:development', 'copy']);
+
+    grunt.registerTask('test', ['jasmine:test']);
 
     grunt.registerTask('build:android', ['build', 'cordovacli:buildAndroid']);
     grunt.registerTask('build:ios', ['build', 'cordovacli:buildIos']);
