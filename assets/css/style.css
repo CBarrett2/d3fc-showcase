@@ -6928,8 +6928,11 @@ path.area {
 }
 
 #head-row {
-  margin-top: 10px;
-  margin-bottom: 8px;
+  margin: 0px;
+  padding-top: 10px;
+  padding-bottom: 8px;
+  background-color: #f0f8ff;
+  border-bottom: 2px solid #b0c4de;
 }
 .chart {
   display: block;
