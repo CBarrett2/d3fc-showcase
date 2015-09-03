@@ -22,9 +22,9 @@
 
         function navChart(selection) {
             var data = selection.datum().data;
-            var viewDomain = selection.datum().viewDomain;
+            var domain = selection.datum().domain;
 
-            viewScale.domain(viewDomain)
+            viewScale.domain(domain)
                 .range([0, parseInt(selection.style('width'), 10)]);
 
             var yExtent = fc.util.extent(sc.util.filterDataInDateRange(data,

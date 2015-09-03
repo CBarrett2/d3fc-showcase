@@ -43,8 +43,8 @@
             .yTicks(5)
             .xTicks(0);
 
-        var currentSeries = sc.series.candlestick();
-        var currentIndicator;
+        var currentSeries = sc.menu.option('Candlestick', 'candlestick', sc.series.candlestick(), true);
+        var currentIndicator = sc.menu.option('None', 'no-indicator', null);
 
         // Create and apply the Moving Average
         var movingAverage = fc.indicator.algorithm.movingAverage();
@@ -63,21 +63,23 @@
                 }
                 return series;
             })
-            .series([gridlines, currentSeries, closeLine]);
+            .series([gridlines, currentSeries.option, closeLine]);
 
         function updateMultiSeries() {
-            if (currentIndicator) {
-                multi.series([gridlines, currentSeries, closeLine, currentIndicator]);
+            if (currentIndicator.option) {
+                multi.series([gridlines, currentSeries.option, closeLine, currentIndicator.option]);
             } else {
-                multi.series([gridlines, currentSeries, closeLine]);
+                multi.series([gridlines, currentSeries.option, closeLine]);
             }
         }
 
         function primaryChart(selection) {
             var data = selection.datum().data;
-            var viewDomain = selection.datum().viewDomain;
+            var domain = selection.datum().domain;
 
-            timeSeries.xDomain(viewDomain);
+            var currentBufferPeriod = currentSeries.buffer ? selection.datum().dataPeriod : 0;
+            var paddedDomain = sc.util.paddedExtent(domain, currentBufferPeriod);
+            timeSeries.xDomain(paddedDomain);
 
             // Scale y axis
             var yExtent = fc.util.extent(sc.util.filterDataInDateRange(data, timeSeries.xDomain()), ['low', 'high']);
@@ -121,15 +123,7 @@
             timeSeries.plotArea(multi);
             selection.call(timeSeries);
 
-            // Behaves oddly if not reinitialized every render
-            var zoom = d3.behavior.zoom();
-            zoom.x(timeSeries.xScale())
-                .on('zoom', function() {
-                    sc.util.zoomControl(zoom, selection.select('.plot-area'), data, timeSeries.xScale());
-                    dispatch.viewChange(timeSeries.xDomain());
-                });
-
-            selection.call(zoom);
+            sc.util.applyZoom(selection, data, dispatch, domain);
         }
 
         d3.rebind(primaryChart, dispatch, 'on');

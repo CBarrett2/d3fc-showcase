@@ -5,12 +5,12 @@
 
         var dispatch = d3.dispatch('primaryChartSeriesChange');
 
-        var candlestick = sc.menu.option('Candlestick', 'candlestick', fc.series.candlestick());
-        var ohlc = sc.menu.option('OHLC', 'ohlc', fc.series.ohlc());
-        var line = sc.menu.option('Line', 'line', fc.series.line());
+        var candlestick = sc.menu.option('Candlestick', 'candlestick', sc.series.candlestick(), true);
+        var ohlc = sc.menu.option('OHLC', 'ohlc', fc.series.ohlc(), true);
+        var line = sc.menu.option('Line', 'line', fc.series.line(), false);
         line.option.isLine = true;
-        var point = sc.menu.option('Point', 'point', fc.series.point());
-        var area = sc.menu.option('Area', 'area', fc.series.area());
+        var point = sc.menu.option('Point', 'point', fc.series.point(), true);
+        var area = sc.menu.option('Area', 'area', fc.series.area(), false);
 
         var options = sc.menu.generator.buttonGroup()
             .on('optionChange', function(series) {
