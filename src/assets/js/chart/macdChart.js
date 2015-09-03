@@ -11,7 +11,7 @@
         function macdChart(selection) {
             var data = selection.datum().data;
             var domain = selection.datum().domain;
-            var currentBufferPeriod = selection.datum().displayBuffer ? selection.datum().dataPeriod : 0;
+            var currentBufferPeriod = selection.datum().displayBuffer ? selection.datum().period : 0;
             var paddedDomain = sc.util.paddedExtent(domain, currentBufferPeriod);
 
             macdAlgorithm(data);

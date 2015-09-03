@@ -77,7 +77,7 @@
             var data = selection.datum().data;
             var domain = selection.datum().domain;
 
-            var currentBufferPeriod = currentSeries.buffer ? selection.datum().dataPeriod : 0;
+            var currentBufferPeriod = currentSeries.buffer ? selection.datum().period : 0;
             var paddedDomain = sc.util.paddedExtent(domain, currentBufferPeriod);
             timeSeries.xDomain(paddedDomain);
 
