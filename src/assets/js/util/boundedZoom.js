@@ -1,13 +1,14 @@
 (function(d3, fc, sc) {
     'use strict';
-    sc.util.applyZoom = function(selection, data, dispatch, domain) {
+    sc.util.boundedZoom = function(selection, dispatch) {
+        console.log(selection);
         var collisionScale = fc.scale.dateTime()
-            .domain(domain)
+            .domain(selection.datum().domain)
             .range([0, parseInt(selection.attr('width'), 10)]);
         var zoom = d3.behavior.zoom();
         zoom.x(collisionScale)
             .on('zoom', function() {
-                sc.util.zoomControl(zoom, selection, data, collisionScale);
+                sc.util.zoomControl(zoom, selection, selection.datum().data, collisionScale);
                 dispatch.viewChange(collisionScale.domain());
             });
 

@@ -26,7 +26,7 @@
 
             rsiAlgorithm(data);
 
-            sc.util.applyZoom(selection, data, dispatch, domain);
+            selection.call(sc.util.boundedZoom, dispatch);
 
             selection.datum(data)
                 .call(rsi);

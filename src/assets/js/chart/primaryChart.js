@@ -123,7 +123,7 @@
             timeSeries.plotArea(multi);
             selection.call(timeSeries);
 
-            sc.util.applyZoom(selection, data, dispatch, domain);
+            selection.call(sc.util.boundedZoom, dispatch);
         }
 
         d3.rebind(primaryChart, dispatch, 'on');

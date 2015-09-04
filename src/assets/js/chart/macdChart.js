@@ -27,7 +27,7 @@
                 .domain([-maxYExtent, maxYExtent])
                 .range([parseInt(selection.style('height'), 10), 0]);
 
-            sc.util.applyZoom(selection, data, dispatch, domain);
+            selection.call(sc.util.boundedZoom, dispatch);
 
             selection.datum(data)
                 .call(macd);
