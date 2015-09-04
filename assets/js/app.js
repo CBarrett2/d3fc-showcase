@@ -1097,7 +1097,6 @@
             }
         })
         .on('periodChange', function(period) {
-            dataModel.period = period;
             dataInterface(dataModel.period);
         });
 
