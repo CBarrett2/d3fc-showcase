@@ -1053,7 +1053,7 @@
             if (err) {
                 console.log('Error getting historic data: ' + err);
             } else {
-                if (container.select('#type-selection').property('value')) {
+                if (container.select('#type-selection').property('value') === 'bitcoin') {
                     dataModel.period = container.select('#period-selection').property('value');
                 } else {
                     dataModel.period = 60 * 60 * 24;
