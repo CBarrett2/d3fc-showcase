@@ -13,9 +13,8 @@
 
         function xAxisChart(selection) {
             var data = selection.datum().data;
-            var viewDomain = selection.datum().viewDomain;
-
-            var zoom = d3.behavior.zoom();
+            var currentBufferPeriod = selection.datum().displayBuffer ? selection.datum().period : 0;
+            var paddedDomain = sc.util.paddedExtent(selection.datum().domain, currentBufferPeriod);
 
             // Redraw
             var xAxisContainer = selection.selectAll('g.x-axis')
@@ -34,18 +33,11 @@
             selection.layout();
 
             xScale.range([0, xAxisContainer.layout('width')])
-                .domain(viewDomain);
+                .domain(paddedDomain);
+
+            selection.call(sc.util.boundedZoom, dispatch);
 
             xAxisContainer.call(xAxis);
-
-            // Behaves oddly if not reinitialized every render
-            zoom.x(xScale)
-                .on('zoom', function() {
-                    sc.util.zoomControl(zoom, selection, data, xScale);
-                    dispatch.viewChange(xScale.domain());
-                });
-
-            selection.call(zoom);
         }
 
         d3.rebind(xAxisChart, dispatch, 'on');

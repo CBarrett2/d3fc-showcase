@@ -10,7 +10,9 @@
 
         function macdChart(selection) {
             var data = selection.datum().data;
-            var viewDomain = selection.datum().viewDomain;
+            var domain = selection.datum().domain;
+            var currentBufferPeriod = selection.datum().displayBuffer ? selection.datum().period : 0;
+            var paddedDomain = sc.util.paddedExtent(domain, currentBufferPeriod);
 
             macdAlgorithm(data);
 
@@ -19,21 +21,14 @@
             });
 
             macd.xScale()
-                .domain(viewDomain)
+                .domain(paddedDomain)
                 .range([0, parseInt(selection.style('width'), 10)]);
             macd.yScale()
                 .domain([-maxYExtent, maxYExtent])
                 .range([parseInt(selection.style('height'), 10), 0]);
 
+            selection.call(sc.util.boundedZoom, dispatch);
 
-            var zoom = d3.behavior.zoom();
-            zoom.x(macd.xScale())
-                .on('zoom', function() {
-                    sc.util.zoomControl(zoom, selection, data, macd.xScale());
-                    dispatch.viewChange(macd.xScale().domain());
-                });
-
-            selection.call(zoom);
             selection.datum(data)
                 .call(macd);
         }

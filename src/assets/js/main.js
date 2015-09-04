@@ -12,6 +12,7 @@
     var dataModel = {
         data: [],
         period: 60 * 60 * 24,
+        displayBuffer: true,
         viewDomain: []
     };
 
@@ -42,7 +43,7 @@
     }
 
     function onViewChanged(domain) {
-        dataModel.viewDomain = [domain[0], domain[1]];
+        dataModel.domain = [domain[0], domain[1]];
         render();
     }
 
@@ -89,6 +90,8 @@
             remove them and re-write them to the DOM in the correct order. */
             svgPrimary.selectAll('.multi')
                 .remove();
+
+            dataModel.displayBuffer = series.option.barWidth || series.option.radius ? true : false;
             render();
         })
         .on('primaryChartIndicatorChange', function(indicator) {

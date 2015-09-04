@@ -91,7 +91,7 @@
                 }
                 return series;
             })
-            .series([gridlines, currentSeries, closeLine]);
+            .series([gridlines, currentSeries.option, closeLine]);
 
         function updateMultiSeries() {
             if (currentIndicator.option) {
@@ -103,9 +103,10 @@
 
         function primaryChart(selection) {
             var data = selection.datum().data;
-            var viewDomain = selection.datum().viewDomain;
-
-            timeSeries.xDomain(viewDomain);
+            var domain = selection.datum().domain;
+            var currentBufferPeriod = selection.datum().displayBuffer ? selection.datum().period : 0;
+            var paddedDomain = sc.util.paddedExtent(domain, currentBufferPeriod);
+            timeSeries.xDomain(paddedDomain);
 
             var visibleData = sc.util.filterDataInDateRange(data, timeSeries.xDomain());
 
@@ -150,15 +151,7 @@
             timeSeries.plotArea(multi);
             selection.call(timeSeries);
 
-            // Behaves oddly if not reinitialized every render
-            var zoom = d3.behavior.zoom();
-            zoom.x(timeSeries.xScale())
-                .on('zoom', function() {
-                    sc.util.zoomControl(zoom, selection.select('.plot-area'), data, timeSeries.xScale());
-                    dispatch.viewChange(timeSeries.xDomain());
-                });
-
-            selection.call(zoom);
+            selection.call(sc.util.boundedZoom, dispatch);
         }
 
         d3.rebind(primaryChart, dispatch, 'on');

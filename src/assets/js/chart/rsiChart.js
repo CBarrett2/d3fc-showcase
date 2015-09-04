@@ -14,23 +14,20 @@
 
         function rsiChart(selection) {
             var data = selection.datum().data;
-            var viewDomain = selection.datum().viewDomain;
+            var domain = selection.datum().domain;
+
+            var currentBufferPeriod = selection.datum().displayBuffer ? selection.datum().period : 0;
+            var paddedDomain = sc.util.paddedExtent(domain, currentBufferPeriod);
 
             rsi.xScale()
-                .domain(viewDomain)
+                .domain(paddedDomain)
                 .range([0, parseInt(selection.style('width'), 10)]);
             rsi.yScale().range([parseInt(selection.style('height'), 10), 0]);
 
             rsiAlgorithm(data);
 
-            var zoom = d3.behavior.zoom();
-            zoom.x(rsi.xScale())
-                .on('zoom', function() {
-                    sc.util.zoomControl(zoom, selection, data, rsi.xScale());
-                    dispatch.viewChange(rsi.xScale().domain());
-                });
+            selection.call(sc.util.boundedZoom, dispatch);
 
-            selection.call(zoom);
             selection.datum(data)
                 .call(rsi);
         }
