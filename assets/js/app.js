@@ -35,9 +35,7 @@
 
         function macdChart(selection) {
             var data = selection.datum().data;
-            var domain = selection.datum().domain;
-            var currentBufferPeriod = selection.datum().displayBuffer ? selection.datum().period : 0;
-            var paddedDomain = sc.util.paddedExtent(domain, currentBufferPeriod);
+            var viewDomain = selection.datum().viewDomain;
 
             macdAlgorithm(data);
 
@@ -46,14 +44,21 @@
             });
 
             macd.xScale()
-                .domain(paddedDomain)
+                .domain(viewDomain)
                 .range([0, parseInt(selection.style('width'), 10)]);
             macd.yScale()
                 .domain([-maxYExtent, maxYExtent])
                 .range([parseInt(selection.style('height'), 10), 0]);
 
-            selection.call(sc.util.boundedZoom, dispatch);
 
+            var zoom = d3.behavior.zoom();
+            zoom.x(macd.xScale())
+                .on('zoom', function() {
+                    sc.util.zoomControl(zoom, selection, data, macd.xScale());
+                    dispatch.viewChange(macd.xScale().domain());
+                });
+
+            selection.call(zoom);
             selection.datum(data)
                 .call(macd);
         }
@@ -88,9 +93,9 @@
 
         function navChart(selection) {
             var data = selection.datum().data;
-            var domain = selection.datum().domain;
+            var viewDomain = selection.datum().viewDomain;
 
-            viewScale.domain(domain)
+            viewScale.domain(viewDomain)
                 .range([0, parseInt(selection.style('width'), 10)]);
 
             var yExtent = fc.util.extent(sc.util.filterDataInDateRange(data,
@@ -187,8 +192,8 @@
             .yTicks(5)
             .xTicks(0);
 
-        var currentSeries = sc.menu.option('Candlestick', 'candlestick', sc.series.candlestick(), true);
-        var currentIndicator = sc.menu.option('None', 'no-indicator', null);
+        var currentSeries = sc.series.candlestick();
+        var currentIndicator;
 
         // Create and apply the Moving Average
         var movingAverage = fc.indicator.algorithm.movingAverage();
@@ -207,23 +212,21 @@
                 }
                 return series;
             })
-            .series([gridlines, currentSeries.option, closeLine]);
+            .series([gridlines, currentSeries, closeLine]);
 
         function updateMultiSeries() {
-            if (currentIndicator.option) {
-                multi.series([gridlines, currentSeries.option, closeLine, currentIndicator.option]);
+            if (currentIndicator) {
+                multi.series([gridlines, currentSeries, closeLine, currentIndicator]);
             } else {
-                multi.series([gridlines, currentSeries.option, closeLine]);
+                multi.series([gridlines, currentSeries, closeLine]);
             }
         }
 
         function primaryChart(selection) {
             var data = selection.datum().data;
-            var domain = selection.datum().domain;
+            var viewDomain = selection.datum().viewDomain;
 
-            var currentBufferPeriod = currentSeries.buffer ? selection.datum().period : 0;
-            var paddedDomain = sc.util.paddedExtent(domain, currentBufferPeriod);
-            timeSeries.xDomain(paddedDomain);
+            timeSeries.xDomain(viewDomain);
 
             // Scale y axis
             var yExtent = fc.util.extent(sc.util.filterDataInDateRange(data, timeSeries.xDomain()), ['low', 'high']);
@@ -267,7 +270,15 @@
             timeSeries.plotArea(multi);
             selection.call(timeSeries);
 
-            selection.call(sc.util.boundedZoom, dispatch);
+            // Behaves oddly if not reinitialized every render
+            var zoom = d3.behavior.zoom();
+            zoom.x(timeSeries.xScale())
+                .on('zoom', function() {
+                    sc.util.zoomControl(zoom, selection.select('.plot-area'), data, timeSeries.xScale());
+                    dispatch.viewChange(timeSeries.xDomain());
+                });
+
+            selection.call(zoom);
         }
 
         d3.rebind(primaryChart, dispatch, 'on');
@@ -306,20 +317,23 @@
 
         function rsiChart(selection) {
             var data = selection.datum().data;
-            var domain = selection.datum().domain;
-
-            var currentBufferPeriod = selection.datum().displayBuffer ? selection.datum().period : 0;
-            var paddedDomain = sc.util.paddedExtent(domain, currentBufferPeriod);
+            var viewDomain = selection.datum().viewDomain;
 
             rsi.xScale()
-                .domain(paddedDomain)
+                .domain(viewDomain)
                 .range([0, parseInt(selection.style('width'), 10)]);
             rsi.yScale().range([parseInt(selection.style('height'), 10), 0]);
 
             rsiAlgorithm(data);
 
-            selection.call(sc.util.boundedZoom, dispatch);
+            var zoom = d3.behavior.zoom();
+            zoom.x(rsi.xScale())
+                .on('zoom', function() {
+                    sc.util.zoomControl(zoom, selection, data, rsi.xScale());
+                    dispatch.viewChange(rsi.xScale().domain());
+                });
 
+            selection.call(zoom);
             selection.datum(data)
                 .call(rsi);
         }
@@ -345,8 +359,9 @@
 
         function xAxisChart(selection) {
             var data = selection.datum().data;
-            var currentBufferPeriod = selection.datum().displayBuffer ? selection.datum().period : 0;
-            var paddedDomain = sc.util.paddedExtent(selection.datum().domain, currentBufferPeriod);
+            var viewDomain = selection.datum().viewDomain;
+
+            var zoom = d3.behavior.zoom();
 
             // Redraw
             var xAxisContainer = selection.selectAll('g.x-axis')
@@ -365,11 +380,18 @@
             selection.layout();
 
             xScale.range([0, xAxisContainer.layout('width')])
-                .domain(paddedDomain);
-
-            selection.call(sc.util.boundedZoom, dispatch);
+                .domain(viewDomain);
 
             xAxisContainer.call(xAxis);
+
+            // Behaves oddly if not reinitialized every render
+            zoom.x(xScale)
+                .on('zoom', function() {
+                    sc.util.zoomControl(zoom, selection, data, xScale);
+                    dispatch.viewChange(xScale.domain());
+                });
+
+            selection.call(zoom);
         }
 
         d3.rebind(xAxisChart, dispatch, 'on');
@@ -489,12 +511,11 @@
 })(d3, fc, sc);
 (function(d3, fc) {
     'use strict';
-    sc.menu.option = function(displayString, valueString, option, buffer) {
+    sc.menu.option = function(displayString, valueString, option) {
         return {
             displayString: displayString,
             valueString: valueString,
-            option: option,
-            buffer: buffer
+            option: option
         };
     };
 
@@ -540,12 +561,12 @@
 
         var dispatch = d3.dispatch('primaryChartSeriesChange');
 
-        var candlestick = sc.menu.option('Candlestick', 'candlestick', sc.series.candlestick(), true);
-        var ohlc = sc.menu.option('OHLC', 'ohlc', fc.series.ohlc(), true);
-        var line = sc.menu.option('Line', 'line', fc.series.line(), false);
+        var candlestick = sc.menu.option('Candlestick', 'candlestick', fc.series.candlestick());
+        var ohlc = sc.menu.option('OHLC', 'ohlc', fc.series.ohlc());
+        var line = sc.menu.option('Line', 'line', fc.series.line());
         line.option.isLine = true;
-        var point = sc.menu.option('Point', 'point', fc.series.point(), true);
-        var area = sc.menu.option('Area', 'area', fc.series.area(), false);
+        var point = sc.menu.option('Point', 'point', fc.series.point());
+        var area = sc.menu.option('Area', 'area', fc.series.area());
 
         var options = sc.menu.generator.buttonGroup()
             .on('optionChange', function(series) {
@@ -589,22 +610,6 @@
         };
 
         return d3.rebind(secondaryChartMenu, dispatch, 'on');
-    };
-})(d3, fc, sc);
-(function(d3, fc, sc) {
-    'use strict';
-    sc.util.boundedZoom = function(selection, dispatch) {
-        var collisionScale = fc.scale.dateTime()
-            .domain(selection.datum().domain)
-            .range([0, parseInt(selection.attr('width'), 10)]);
-        var zoom = d3.behavior.zoom();
-        zoom.x(collisionScale)
-            .on('zoom', function() {
-                sc.util.zoomControl(zoom, selection, selection.datum().data, collisionScale);
-                dispatch.viewChange(collisionScale.domain());
-            });
-
-        selection.call(zoom);
     };
 })(d3, fc, sc);
 (function(d3, fc) {
@@ -669,19 +674,6 @@
     };
 
 })(d3, fc, sc);
-(function(d3, fc) {
-    'use strict';
-    sc.util.paddedExtent = function(extent, period) {
-        // Adds a buffer of period to either side of data
-        // Create new variable so we don't change the argument
-        var paddedExtent = [extent[0], extent[1]];
-
-        paddedExtent[0] = d3.time.second.offset(new Date(extent[0]), -period);
-        paddedExtent[1] = d3.time.second.offset(new Date(extent[1]), +period);
-
-        return paddedExtent;
-    };
-})(d3, fc);
 (function(d3, fc, sc) {
     'use strict';
 
@@ -1020,7 +1012,7 @@
     }
 
     function onViewChanged(domain) {
-        dataModel.domain = [domain[0], domain[1]];
+        dataModel.viewDomain = [domain[0], domain[1]];
         render();
     }
 
@@ -1061,7 +1053,7 @@
 
     var mainMenu = sc.menu.main()
         .on('primaryChartSeriesChange', function(series) {
-            primaryChart.changeSeries(series);
+            primaryChart.changeSeries(series.option);
             /* Elements are drawn in the order they appear in the HTML - at this minute,
             D3FC doesn't maintain the ordering of elements, so it's easiest to just
             remove them and re-write them to the DOM in the correct order. */
@@ -1070,7 +1062,7 @@
             render();
         })
         .on('primaryChartIndicatorChange', function(indicator) {
-            primaryChart.changeIndicator(indicator);
+            primaryChart.changeIndicator(indicator.option);
             svgPrimary.selectAll('.multi')
                 .remove();
             render();
