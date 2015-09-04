@@ -1053,11 +1053,6 @@
             if (err) {
                 console.log('Error getting historic data: ' + err);
             } else {
-                if (container.select('#type-selection').property('value') === 'bitcoin') {
-                    dataModel.period = container.select('#period-selection').property('value');
-                } else {
-                    dataModel.period = 60 * 60 * 24;
-                }
                 dataModel.data = data;
                 resetToLive();
                 render();
@@ -1091,12 +1086,15 @@
         })
         .on('dataTypeChange', function(type) {
             if (type === 'bitcoin') {
+                dataModel.period = container.select('#period-selection').property('value');
                 dataInterface(dataModel.period);
             } else if (type === 'generated') {
                 dataInterface.generateData();
+                dataModel.period = 60 * 60 * 24;
             }
         })
         .on('periodChange', function(period) {
+            dataModel.period = period;
             dataInterface(dataModel.period);
         });
 
