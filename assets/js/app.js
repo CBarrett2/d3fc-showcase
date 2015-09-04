@@ -35,7 +35,9 @@
 
         function macdChart(selection) {
             var data = selection.datum().data;
-            var viewDomain = selection.datum().viewDomain;
+            var domain = selection.datum().domain;
+            var currentBufferPeriod = selection.datum().displayBuffer ? selection.datum().period : 0;
+            var paddedDomain = sc.util.paddedExtent(domain, currentBufferPeriod);
 
             macdAlgorithm(data);
 
@@ -44,21 +46,14 @@
             });
 
             macd.xScale()
-                .domain(viewDomain)
+                .domain(paddedDomain)
                 .range([0, parseInt(selection.style('width'), 10)]);
             macd.yScale()
                 .domain([-maxYExtent, maxYExtent])
                 .range([parseInt(selection.style('height'), 10), 0]);
 
+            selection.call(sc.util.boundedZoom, dispatch);
 
-            var zoom = d3.behavior.zoom();
-            zoom.x(macd.xScale())
-                .on('zoom', function() {
-                    sc.util.zoomControl(zoom, selection, data, macd.xScale());
-                    dispatch.viewChange(macd.xScale().domain());
-                });
-
-            selection.call(zoom);
             selection.datum(data)
                 .call(macd);
         }
@@ -93,9 +88,9 @@
 
         function navChart(selection) {
             var data = selection.datum().data;
-            var viewDomain = selection.datum().viewDomain;
+            var domain = selection.datum().domain;
 
-            viewScale.domain(viewDomain)
+            viewScale.domain(domain)
                 .range([0, parseInt(selection.style('width'), 10)]);
 
             var yExtent = fc.util.extent(sc.util.filterDataInDateRange(data,
@@ -192,8 +187,8 @@
             .yTicks(5)
             .xTicks(0);
 
-        var currentSeries = sc.series.candlestick();
-        var currentIndicator;
+        var currentSeries = sc.menu.option('Candlestick', 'candlestick', sc.series.candlestick(), true);
+        var currentIndicator = sc.menu.option('None', 'no-indicator', null);
 
         // Create and apply the Moving Average
         var movingAverage = fc.indicator.algorithm.movingAverage();
@@ -212,21 +207,23 @@
                 }
                 return series;
             })
-            .series([gridlines, currentSeries, closeLine]);
+            .series([gridlines, currentSeries.option, closeLine]);
 
         function updateMultiSeries() {
-            if (currentIndicator) {
-                multi.series([gridlines, currentSeries, closeLine, currentIndicator]);
+            if (currentIndicator.option) {
+                multi.series([gridlines, currentSeries.option, closeLine, currentIndicator.option]);
             } else {
-                multi.series([gridlines, currentSeries, closeLine]);
+                multi.series([gridlines, currentSeries.option, closeLine]);
             }
         }
 
         function primaryChart(selection) {
             var data = selection.datum().data;
-            var viewDomain = selection.datum().viewDomain;
+            var domain = selection.datum().domain;
 
-            timeSeries.xDomain(viewDomain);
+            var currentBufferPeriod = currentSeries.buffer ? selection.datum().period : 0;
+            var paddedDomain = sc.util.paddedExtent(domain, currentBufferPeriod);
+            timeSeries.xDomain(paddedDomain);
 
             // Scale y axis
             var yExtent = fc.util.extent(sc.util.filterDataInDateRange(data, timeSeries.xDomain()), ['low', 'high']);
@@ -270,15 +267,7 @@
             timeSeries.plotArea(multi);
             selection.call(timeSeries);
 
-            // Behaves oddly if not reinitialized every render
-            var zoom = d3.behavior.zoom();
-            zoom.x(timeSeries.xScale())
-                .on('zoom', function() {
-                    sc.util.zoomControl(zoom, selection.select('.plot-area'), data, timeSeries.xScale());
-                    dispatch.viewChange(timeSeries.xDomain());
-                });
-
-            selection.call(zoom);
+            selection.call(sc.util.boundedZoom, dispatch);
         }
 
         d3.rebind(primaryChart, dispatch, 'on');
@@ -317,23 +306,20 @@
 
         function rsiChart(selection) {
             var data = selection.datum().data;
-            var viewDomain = selection.datum().viewDomain;
+            var domain = selection.datum().domain;
+
+            var currentBufferPeriod = selection.datum().displayBuffer ? selection.datum().period : 0;
+            var paddedDomain = sc.util.paddedExtent(domain, currentBufferPeriod);
 
             rsi.xScale()
-                .domain(viewDomain)
+                .domain(paddedDomain)
                 .range([0, parseInt(selection.style('width'), 10)]);
             rsi.yScale().range([parseInt(selection.style('height'), 10), 0]);
 
             rsiAlgorithm(data);
 
-            var zoom = d3.behavior.zoom();
-            zoom.x(rsi.xScale())
-                .on('zoom', function() {
-                    sc.util.zoomControl(zoom, selection, data, rsi.xScale());
-                    dispatch.viewChange(rsi.xScale().domain());
-                });
+            selection.call(sc.util.boundedZoom, dispatch);
 
-            selection.call(zoom);
             selection.datum(data)
                 .call(rsi);
         }
@@ -359,9 +345,8 @@
 
         function xAxisChart(selection) {
             var data = selection.datum().data;
-            var viewDomain = selection.datum().viewDomain;
-
-            var zoom = d3.behavior.zoom();
+            var currentBufferPeriod = selection.datum().displayBuffer ? selection.datum().period : 0;
+            var paddedDomain = sc.util.paddedExtent(selection.datum().domain, currentBufferPeriod);
 
             // Redraw
             var xAxisContainer = selection.selectAll('g.x-axis')
@@ -380,18 +365,11 @@
             selection.layout();
 
             xScale.range([0, xAxisContainer.layout('width')])
-                .domain(viewDomain);
+                .domain(paddedDomain);
+
+            selection.call(sc.util.boundedZoom, dispatch);
 
             xAxisContainer.call(xAxis);
-
-            // Behaves oddly if not reinitialized every render
-            zoom.x(xScale)
-                .on('zoom', function() {
-                    sc.util.zoomControl(zoom, selection, data, xScale);
-                    dispatch.viewChange(xScale.domain());
-                });
-
-            selection.call(zoom);
         }
 
         d3.rebind(xAxisChart, dispatch, 'on');
@@ -511,11 +489,12 @@
 })(d3, fc, sc);
 (function(d3, fc) {
     'use strict';
-    sc.menu.option = function(displayString, valueString, option) {
+    sc.menu.option = function(displayString, valueString, option, buffer) {
         return {
             displayString: displayString,
             valueString: valueString,
-            option: option
+            option: option,
+            buffer: buffer
         };
     };
 
@@ -561,12 +540,12 @@
 
         var dispatch = d3.dispatch('primaryChartSeriesChange');
 
-        var candlestick = sc.menu.option('Candlestick', 'candlestick', fc.series.candlestick());
-        var ohlc = sc.menu.option('OHLC', 'ohlc', fc.series.ohlc());
-        var line = sc.menu.option('Line', 'line', fc.series.line());
+        var candlestick = sc.menu.option('Candlestick', 'candlestick', sc.series.candlestick(), true);
+        var ohlc = sc.menu.option('OHLC', 'ohlc', fc.series.ohlc(), true);
+        var line = sc.menu.option('Line', 'line', fc.series.line(), false);
         line.option.isLine = true;
-        var point = sc.menu.option('Point', 'point', fc.series.point());
-        var area = sc.menu.option('Area', 'area', fc.series.area());
+        var point = sc.menu.option('Point', 'point', fc.series.point(), true);
+        var area = sc.menu.option('Area', 'area', fc.series.area(), false);
 
         var options = sc.menu.generator.buttonGroup()
             .on('optionChange', function(series) {
@@ -610,6 +589,22 @@
         };
 
         return d3.rebind(secondaryChartMenu, dispatch, 'on');
+    };
+})(d3, fc, sc);
+(function(d3, fc, sc) {
+    'use strict';
+    sc.util.boundedZoom = function(selection, dispatch) {
+        var collisionScale = fc.scale.dateTime()
+            .domain(selection.datum().domain)
+            .range([0, parseInt(selection.attr('width'), 10)]);
+        var zoom = d3.behavior.zoom();
+        zoom.x(collisionScale)
+            .on('zoom', function() {
+                sc.util.zoomControl(zoom, selection, selection.datum().data, collisionScale);
+                dispatch.viewChange(collisionScale.domain());
+            });
+
+        selection.call(zoom);
     };
 })(d3, fc, sc);
 (function(d3, fc) {
@@ -674,6 +669,19 @@
     };
 
 })(d3, fc, sc);
+(function(d3, fc) {
+    'use strict';
+    sc.util.paddedExtent = function(extent, period) {
+        // Adds a buffer of period to either side of data
+        // Create new variable so we don't change the argument
+        var paddedExtent = [extent[0], extent[1]];
+
+        paddedExtent[0] = d3.time.second.offset(new Date(extent[0]), -period);
+        paddedExtent[1] = d3.time.second.offset(new Date(extent[1]), +period);
+
+        return paddedExtent;
+    };
+})(d3, fc);
 (function(d3, fc, sc) {
     'use strict';
 
@@ -1012,7 +1020,7 @@
     }
 
     function onViewChanged(domain) {
-        dataModel.viewDomain = [domain[0], domain[1]];
+        dataModel.domain = [domain[0], domain[1]];
         render();
     }
 
@@ -1045,6 +1053,11 @@
             if (err) {
                 console.log('Error getting historic data: ' + err);
             } else {
+                if (container.select('#type-selection').property('value')) {
+                    dataModel.period = container.select('#period-selection').property('value');
+                } else {
+                    dataModel.period = 60 * 60 * 24;
+                }
                 dataModel.data = data;
                 resetToLive();
                 render();
@@ -1053,7 +1066,7 @@
 
     var mainMenu = sc.menu.main()
         .on('primaryChartSeriesChange', function(series) {
-            primaryChart.changeSeries(series.option);
+            primaryChart.changeSeries(series);
             /* Elements are drawn in the order they appear in the HTML - at this minute,
             D3FC doesn't maintain the ordering of elements, so it's easiest to just
             remove them and re-write them to the DOM in the correct order. */
@@ -1062,7 +1075,7 @@
             render();
         })
         .on('primaryChartIndicatorChange', function(indicator) {
-            primaryChart.changeIndicator(indicator.option);
+            primaryChart.changeIndicator(indicator);
             svgPrimary.selectAll('.multi')
                 .remove();
             render();
@@ -1078,11 +1091,9 @@
         })
         .on('dataTypeChange', function(type) {
             if (type === 'bitcoin') {
-                dataModel.period = container.select('#period-selection').property('value');
                 dataInterface(dataModel.period);
             } else if (type === 'generated') {
                 dataInterface.generateData();
-                dataModel.period = 60 * 60 * 24;
             }
         })
         .on('periodChange', function(period) {
