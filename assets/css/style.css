@@ -6816,17 +6816,6 @@ button.close {
   fill-opacity: 0;
 }
 
-/* Default Axis Styles */
-.axis .domain,
-.axis .tick line {
-  fill: none;
-  stroke-width: 1.0;
-  stroke: #bbb;
-}
-.axis text {
-  font: 10px sans-serif;
-}
-
 .background {
   stroke: #eee;
   fill: #fefefe;
@@ -6887,6 +6876,39 @@ path.area {
   fill: #9cf;
   fill-opacity: 0.5;
 }
+.domain,
+.tick line,
+.tick path {
+  fill: none;
+  stroke-width: 1.0;
+  stroke: #bbb;
+}
+
+.tick text {
+  font: 10px sans-serif;
+}
+
+.tick.orient-bottom text,
+.tick.orient-top text {
+  text-anchor: middle;
+}
+
+.tick.orient-left text,
+.tick.orient-right text {
+  dominant-baseline: middle;
+}
+
+.tick.orient-left text {
+  text-anchor: end;
+}
+
+.tick.orient-right text {
+  text-anchor: start;
+}
+
+.tick.orient-bottom text {
+  dominant-baseline: hanging;
+}
 /* Ruler/Measure Component Styles */
 .measure>line {
   stroke: #00c;
@@ -6927,22 +6949,42 @@ path.area {
   fill: transparent;
 }
 
+.container {
+  height: 100%;
+}
+[class*="col-"] {
+  height: 100%;
+}
+.chart {
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  display: block;
+  margin-left: 0px;
+}
+.menu #type-selection,
+.menu #period-selection {
+  min-width: 0;
+  width: auto;
+  display: inline;
+  vertical-align: middle;
+}
 #head-row {
+  width: 100%;
   margin: 0px;
   padding-top: 10px;
   padding-bottom: 8px;
   background-color: #f0f8ff;
   border-bottom: 2px solid #b0c4de;
 }
-.chart {
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
+#primary-row {
+  width: 100%;
 }
-.plot-area .annotation.close text {
+.closeLine text {
   fill: #ffffff;
 }
-.plot-area .annotation.close path {
+.closeLine path {
+  stroke: #1a9af9;
   fill: #1a9af9;
 }
 .plot-area path.line {
@@ -6951,8 +6993,39 @@ path.area {
 .plot-area path.line.movingAverage {
   stroke: #ff00ff;
 }
-.nav {
+.plot-area path.down {
+  stroke: #000000;
+  fill: #cc6600;
+}
+.plot-area path.up {
+  stroke: #000000;
+  fill: #66cc00;
+}
+.plot-area .upper > path.line {
+  stroke: #cc6600;
+}
+.plot-area .lower > path.line {
+  stroke: #66cc00;
+}
+.plot-area .average > path.line {
+  visibility: hidden;
+}
+.plot-area .area > path.area {
+  fill: #d3d3d3;
+}
+#secondary-row {
+  width: 100%;
+}
+#secondary-row > [class*="col-"] {
+  width: calc(100% - 45px);
+}
+#x-axis-row {
+  height: 20px;
+  width: calc(100% - 45px);
+}
+#nav-row {
   height: 100px;
+  width: 100%;
 }
 .nav .extent {
   stroke: #d1d1e0;
