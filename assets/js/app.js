@@ -171,8 +171,36 @@
                 annotatedTickValues.push(annotation[i]);
             }
         }
-
         return annotatedTickValues;
+    }
+
+    function findTotalYExtent(visibleData, currentSeries, currentIndicator) {
+        var extentAccessor;
+        if (currentSeries.option.yLowValue && currentSeries.option.yHighValue) {
+            extentAccessor = [currentSeries.option.yLowValue(), currentSeries.option.yHighValue()];
+        } else if (currentSeries.option.yValue) {
+            extentAccessor = currentSeries.option.yValue();
+        } else if (currentSeries.option.y1Value) {
+            extentAccessor = currentSeries.option.y1Value();
+        } else {
+            throw new Error('Main series given to chart does not have expected interface');
+        }
+        var extent = fc.util.extent(visibleData, extentAccessor);
+
+        var indicatorString = currentIndicator.valueString;
+        if (indicatorString === 'movingAverage') {
+            var movingAverageExtent = fc.util.extent(visibleData, 'movingAverage');
+            extent[0] = Math.min(movingAverageExtent[0], extent[0]);
+            extent[1] = Math.max(movingAverageExtent[1], extent[1]);
+        } else if (indicatorString === 'bollinger') {
+            var bollingerBandsVisibleDataObject = visibleData.map(function(d) { return d.bollingerBands; });
+            var bollingerBandsExtent = fc.util.extent(bollingerBandsVisibleDataObject, ['lower', 'upper']);
+            extent[0] = Math.min(bollingerBandsExtent[0], extent[0]);
+            extent[1] = Math.max(bollingerBandsExtent[1], extent[1]);
+        } else if (indicatorString !== 'no-indicator') {
+            throw new Error('Unexpected indicator type');
+        }
+        return extent;
     }
 
     sc.chart.primaryChart = function() {
@@ -192,8 +220,8 @@
             .yTicks(5)
             .xTicks(0);
 
-        var currentSeries = sc.series.candlestick();
-        var currentIndicator;
+        var currentSeries = sc.menu.option('Candlestick', 'candlestick', sc.series.candlestick());
+        var currentIndicator = sc.menu.option('None', 'no-indicator', null);
 
         // Create and apply the Moving Average
         var movingAverage = fc.indicator.algorithm.movingAverage();
@@ -215,10 +243,10 @@
             .series([gridlines, currentSeries, closeLine]);
 
         function updateMultiSeries() {
-            if (currentIndicator) {
-                multi.series([gridlines, currentSeries, closeLine, currentIndicator]);
+            if (currentIndicator.option) {
+                multi.series([gridlines, currentSeries.option, closeLine, currentIndicator.option]);
             } else {
-                multi.series([gridlines, currentSeries, closeLine]);
+                multi.series([gridlines, currentSeries.option, closeLine]);
             }
         }
 
@@ -228,8 +256,10 @@
 
             timeSeries.xDomain(viewDomain);
 
+            var visibleData = sc.util.filterDataInDateRange(data, timeSeries.xDomain());
+
             // Scale y axis
-            var yExtent = fc.util.extent(sc.util.filterDataInDateRange(data, timeSeries.xDomain()), ['low', 'high']);
+            var yExtent = findTotalYExtent(visibleData, currentSeries, currentIndicator);
             // Add 10% either side of extreme high/lows
             var variance = yExtent[1] - yExtent[0];
             yExtent[0] -= variance * 0.1;
@@ -239,7 +269,6 @@
             // Find current tick values and add close price to this list, then set it explicitly below
             var closePrice = data[data.length - 1].close;
             var tickValues = produceAnnotatedTickValues(timeSeries.yScale(), [closePrice]);
-
             timeSeries.yTickValues(tickValues)
                 .yDecorate(function(s) {
                     s.classed('closeLine', function(d) {
@@ -287,13 +316,11 @@
 
         primaryChart.changeSeries = function(series) {
             currentSeries = series;
-            updateMultiSeries();
             return primaryChart;
         };
 
         primaryChart.changeIndicator = function(indicator) {
             currentIndicator = indicator;
-            updateMultiSeries();
             return primaryChart;
         };
 
@@ -561,7 +588,7 @@
 
         var dispatch = d3.dispatch('primaryChartSeriesChange');
 
-        var candlestick = sc.menu.option('Candlestick', 'candlestick', fc.series.candlestick());
+        var candlestick = sc.menu.option('Candlestick', 'candlestick', sc.series.candlestick());
         var ohlc = sc.menu.option('OHLC', 'ohlc', fc.series.ohlc());
         var line = sc.menu.option('Line', 'line', fc.series.line());
         line.option.isLine = true;
@@ -917,12 +944,14 @@
         var barWidth = fc.util.fractionalBarWidth(0.75);
         var xValue = function(d, i) { return d.date; };
         var xValueScaled = function(d, i) { return xScale(xValue(d, i)); };
+        var yLowValue = function(d) { return d.low; };
+        var yHighValue = function(d) { return d.high; };
 
         var candlestickSvg = fc.svg.candlestick()
             .x(function(d) { return xScale(d.date); })
             .open(function(d) { return yScale(d.open); })
-            .high(function(d) { return yScale(d.high); })
-            .low(function(d) { return yScale(d.low); })
+            .high(function(d) { return yScale(yHighValue(d)); })
+            .low(function(d) { return yScale(yLowValue(d)); })
             .close(function(d) { return yScale(d.close); });
 
         var upDataJoin = fc.util.dataJoin()
@@ -957,11 +986,28 @@
             xScale = x;
             return candlestick;
         };
+
         candlestick.yScale = function(x) {
             if (!arguments.length) {
                 return yScale;
             }
             yScale = x;
+            return candlestick;
+        };
+
+        candlestick.yLowValue = function(x) {
+            if (!arguments.length) {
+                return yLowValue;
+            }
+            yLowValue = x;
+            return candlestick;
+        };
+
+        candlestick.yHighValue = function(x) {
+            if (!arguments.length) {
+                return yHighValue;
+            }
+            yHighValue = x;
             return candlestick;
         };
 
@@ -1053,7 +1099,7 @@
 
     var mainMenu = sc.menu.main()
         .on('primaryChartSeriesChange', function(series) {
-            primaryChart.changeSeries(series.option);
+            primaryChart.changeSeries(series);
             /* Elements are drawn in the order they appear in the HTML - at this minute,
             D3FC doesn't maintain the ordering of elements, so it's easiest to just
             remove them and re-write them to the DOM in the correct order. */
@@ -1062,7 +1108,7 @@
             render();
         })
         .on('primaryChartIndicatorChange', function(indicator) {
-            primaryChart.changeIndicator(indicator.option);
+            primaryChart.changeIndicator(indicator);
             svgPrimary.selectAll('.multi')
                 .remove();
             render();
