@@ -1,7 +1,6 @@
 (function(d3, fc, sc) {
     'use strict';
     sc.util.boundedZoom = function(selection, dispatch) {
-        console.log(selection);
         var collisionScale = fc.scale.dateTime()
             .domain(selection.datum().domain)
             .range([0, parseInt(selection.attr('width'), 10)]);
